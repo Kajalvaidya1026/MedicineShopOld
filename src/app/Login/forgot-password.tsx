@@ -4,35 +4,29 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  Pressable,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { router } from "expo-router";
 
-export default function ForgotPassword() {
-  const router = useRouter();
+export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
 
   const handleContinue = () => {
     if (!email.trim()) {
-      setError("Please enter your email address.");
+      Alert.alert("Email Required", "Please enter your registered email.");
       return;
     }
 
     if (!email.includes("@")) {
-      setError("Please enter a valid email address.");
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
       return;
     }
 
-    setError("");
-
-    router.push({
-      pathname: "/Login/otp",
-      params: { email },
-    });
+    router.push("/Login/otp");
   };
 
   return (
@@ -41,14 +35,13 @@ export default function ForgotPassword() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
         {/* HEADER */}
-
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.logoBox}>
+          <View style={styles.brand}>
+            <View style={styles.logo}>
               <View style={styles.crossVertical} />
               <View style={styles.crossHorizontal} />
             </View>
@@ -56,97 +49,62 @@ export default function ForgotPassword() {
             <View>
               <Text style={styles.logoText}>MEDICARE</Text>
               <Text style={styles.logoSubText}>
-                Medicine Management
+                Medicine Shop Management
               </Text>
             </View>
           </View>
 
-          <Text style={styles.helpText}>Help</Text>
+          <Text style={styles.help}>Help</Text>
         </View>
 
-        {/* MAIN */}
-
-        <View style={styles.main}>
-          <View style={styles.card}>
-            <Text style={styles.title}>
-              Forgot your password?
-            </Text>
-
-            <Text style={styles.description}>
-              No problem. Enter the email address associated
-              with your account and we'll send you a
-              verification code.
-            </Text>
-
-            {/* EMAIL */}
-
-            <Text style={styles.label}>
-              Email address
-            </Text>
-
-            <TextInput
-              style={[
-                styles.input,
-                error ? styles.inputError : null,
-              ]}
-              placeholder="Enter your email"
-              placeholderTextColor="#8AA2A9"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setError("");
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            {error ? (
-              <Text style={styles.errorText}>
-                {error}
-              </Text>
-            ) : null}
-
-            {/* CONTINUE */}
-
-            <Pressable
-              style={styles.primaryButton}
-              onPress={handleContinue}
-            >
-              <Text style={styles.primaryButtonText}>
-                Continue →
-              </Text>
-            </Pressable>
-
-            {/* BACK */}
-
-            <Pressable
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.backText}>
-                ← Back to sign in
-              </Text>
-            </Pressable>
+        {/* CARD */}
+        <View style={styles.card}>
+          <View style={styles.iconContainer}>
+            <View style={styles.lockBody} />
+            <View style={styles.lockTop} />
           </View>
 
-          {/* SECURITY */}
+          <Text style={styles.title}>Forgot Password?</Text>
+
+          <Text style={styles.description}>
+            Enter your registered email address and we'll help you securely
+            reset your password.
+          </Text>
+
+          <Text style={styles.label}>Registered Email</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your email address"
+            placeholderTextColor="#8AA0A7"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={handleContinue}
+          >
+            <Text style={styles.continueText}>Continue</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backText}>← Back to Sign In</Text>
+          </TouchableOpacity>
 
           <View style={styles.securityBox}>
-            <View style={styles.securityIcon}>
-              <Text style={styles.securityCheck}>✓</Text>
-            </View>
+            <Text style={styles.securityTitle}>🔒 Secure Password Recovery</Text>
 
-            <View style={styles.securityContent}>
-              <Text style={styles.securityTitle}>
-                Your information is secure
-              </Text>
-
-              <Text style={styles.securityText}>
-                We protect your account information using
-                secure authentication.
-              </Text>
-            </View>
+            <Text style={styles.securityText}>
+              Your account information is protected. Verification is required
+              before changing your password.
+            </Text>
           </View>
         </View>
 
@@ -164,25 +122,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5F9FA",
   },
 
-  scrollContent: {
+  scroll: {
     flexGrow: 1,
   },
 
   header: {
     height: 82,
-    backgroundColor: "#0D5367",
-    paddingHorizontal: 30,
+    backgroundColor: "#083C4A",
+    paddingHorizontal: 35,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
 
-  headerLeft: {
+  brand: {
     flexDirection: "row",
     alignItems: "center",
   },
 
-  logoBox: {
+  logo: {
     width: 44,
     height: 44,
     borderRadius: 13,
@@ -212,43 +170,69 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 19,
     fontWeight: "800",
-    letterSpacing: 1.5,
+    letterSpacing: 1,
   },
 
   logoSubText: {
-    color: "#CDE9EE",
-    fontSize: 10,
+    color: "#B7D7DE",
+    fontSize: 9,
     marginTop: 2,
   },
 
-  helpText: {
+  help: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
   },
 
-  main: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 70,
-    paddingBottom: 40,
-  },
-
   card: {
-    width: "100%",
+    width: "90%",
     maxWidth: 470,
     backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 32,
-    elevation: 8,
-    shadowColor: "#0D5367",
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
+    borderRadius: 22,
+    padding: 34,
+    alignSelf: "center",
+    marginTop: 55,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
     shadowOffset: {
       width: 0,
       height: 7,
     },
+    elevation: 4,
+  },
+
+  iconContainer: {
+    width: 58,
+    height: 58,
+    borderRadius: 17,
+    backgroundColor: "#EAF6F8",
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+
+  lockBody: {
+    width: 25,
+    height: 21,
+    backgroundColor: "#0D5367",
+    borderRadius: 5,
+    position: "absolute",
+    bottom: 13,
+  },
+
+  lockTop: {
+    width: 17,
+    height: 18,
+    borderWidth: 4,
+    borderColor: "#0D5367",
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    position: "absolute",
+    top: 13,
   },
 
   title: {
@@ -263,13 +247,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 21,
     textAlign: "center",
-    marginTop: 13,
+    marginTop: 10,
     marginBottom: 30,
   },
 
   label: {
     color: "#153B47",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     marginBottom: 8,
   },
@@ -277,34 +261,24 @@ const styles = StyleSheet.create({
   input: {
     height: 52,
     borderWidth: 1,
-    borderColor: "#D4E5E8",
-    borderRadius: 10,
-    backgroundColor: "#F9FCFC",
-    paddingHorizontal: 16,
+    borderColor: "#D7E5E8",
+    borderRadius: 11,
+    backgroundColor: "#FAFCFC",
+    paddingHorizontal: 15,
     color: "#153B47",
     fontSize: 14,
   },
 
-  inputError: {
-    borderColor: "#D9534F",
-  },
-
-  errorText: {
-    color: "#D9534F",
-    fontSize: 12,
-    marginTop: 7,
-  },
-
-  primaryButton: {
+  continueButton: {
     height: 52,
     backgroundColor: "#0D5367",
-    borderRadius: 10,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 22,
   },
 
-  primaryButtonText: {
+  continueText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "800",
@@ -312,47 +286,25 @@ const styles = StyleSheet.create({
 
   backButton: {
     alignItems: "center",
-    marginTop: 22,
+    marginTop: 20,
   },
 
   backText: {
     color: "#0A829A",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
 
   securityBox: {
-    width: "100%",
-    maxWidth: 470,
-    flexDirection: "row",
-    backgroundColor: "#EAF6F8",
+    backgroundColor: "#F5F9FA",
     borderRadius: 12,
-    padding: 16,
-    marginTop: 20,
-  },
-
-  securityIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#0D5367",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  securityCheck: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-  },
-
-  securityContent: {
-    flex: 1,
-    marginLeft: 12,
+    padding: 15,
+    marginTop: 25,
   },
 
   securityTitle: {
     color: "#153B47",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
   },
 
@@ -360,13 +312,14 @@ const styles = StyleSheet.create({
     color: "#70868D",
     fontSize: 11,
     lineHeight: 17,
-    marginTop: 3,
+    marginTop: 5,
   },
 
   footer: {
     textAlign: "center",
-    color: "#82979D",
+    color: "#8AA0A7",
     fontSize: 11,
-    paddingBottom: 25,
+    marginTop: 30,
+    marginBottom: 30,
   },
 });
