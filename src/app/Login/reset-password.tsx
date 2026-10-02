@@ -1,312 +1,502 @@
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 
-import { useState } from "react"; // Used to store password values
-
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+
+import AuthAnimatedCard from "../components/AuthAnimatedCard";
+import EmbossedIcon from "../components/EmbossedIcon";
 
 export default function ResetPassword() {
   const { role } = useLocalSearchParams();
 
   const roleName = Array.isArray(role) ? role[0] : role;
 
-  // Store the password entered by the user
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const buttonScale = useRef(new Animated.Value(1)).current;
+
+  // Password validations
   const hasEightCharacters = newPassword.length >= 8;
   const hasUppercase = /[A-Z]/.test(newPassword);
   const hasLowercase = /[a-z]/.test(newPassword);
   const hasNumber = /[0-9]/.test(newPassword);
-  const hasSpecialCharacter = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+  const hasSpecialCharacter =
+    /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
 
-  // Check whether both passwords are the same
   const passwordsMatch =
     newPassword.length > 0 &&
     confirmPassword.length > 0 &&
     newPassword === confirmPassword;
 
   const handleResetPassword = () => {
-    // Check if password is at least 8 characters
     if (!hasEightCharacters) {
       Alert.alert(
         "Invalid Password",
-        "Password must contain at least 8 characters.",
+        "Password must contain at least 8 characters."
       );
       return;
     }
 
-    // Check for uppercase letter
     if (!hasUppercase) {
       Alert.alert(
         "Invalid Password",
-        "Password must contain at least one uppercase letter.",
+        "Password must contain at least one uppercase letter."
       );
       return;
     }
 
-    // Check for lowercase letter
     if (!hasLowercase) {
       Alert.alert(
         "Invalid Password",
-        "Password must contain at least one lowercase letter.",
+        "Password must contain at least one lowercase letter."
       );
       return;
     }
 
-    // Check for number
     if (!hasNumber) {
       Alert.alert(
         "Invalid Password",
-        "Password must contain at least one number.",
+        "Password must contain at least one number."
       );
       return;
     }
 
-    // Check for special character
     if (!hasSpecialCharacter) {
       Alert.alert(
         "Invalid Password",
-        "Password must contain at least one special character.",
+        "Password must contain at least one special character."
       );
       return;
     }
 
-    // Check whether passwords match
     if (!passwordsMatch) {
       Alert.alert(
         "Password Mismatch",
-        "New password and confirm password must be the same.",
+        "New password and confirm password must be the same."
       );
       return;
     }
 
-    // If all validations are successful
-    Alert.alert("Success", "Your password has been reset successfully.", [
-      {
-        text: "OK",
-        onPress: () => {
-          // Return to the selected role login page
-          router.push({
-            pathname: "/Login/role",
-            params: { role: roleName },
-          });
+    Alert.alert(
+      "Password Changed",
+      "Your password has been reset successfully.",
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            router.push({
+              pathname: "/Login/role",
+              params: {
+                role: roleName || "",
+              },
+            });
+          },
         },
-      },
-    ]);
+      ]
+    );
+  };
+
+  const handlePressIn = () => {
+    Animated.spring(buttonScale, {
+      toValue: 0.96,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(buttonScale, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Reset Password</Text>
+      {/* Decorative background circles */}
+      <View style={styles.backgroundCircleOne} />
+      <View style={styles.backgroundCircleTwo} />
 
-        <Text style={styles.subtitle}>
-          Create a new password for your account
-        </Text>
+      <AuthAnimatedCard>
+        <View style={styles.content}>
+          {/* Icon */}
+          <EmbossedIcon icon="🔒" />
 
-        <Text style={styles.label}>New Password</Text>
-
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Enter new password"
-            placeholderTextColor="#98A2B3"
-            secureTextEntry={!showNewPassword}
-            value={newPassword}
-            onChangeText={setNewPassword}
-          />
-
-          <TouchableOpacity
-            onPress={() => setShowNewPassword(!showNewPassword)}
-          >
-            <Ionicons
-              name={showNewPassword ? "eye-off-outline" : "eye-outline"}
-              size={22}
-              color="#1E3A5F"
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Password requirements - these update while the user types */}
-        <View style={styles.requirements}>
-          <Text style={styles.requirementTitle}>Password must contain:</Text>
-
-          {/* At least 8 characters */}
-          <Text style={hasEightCharacters ? styles.valid : styles.invalid}>
-            {hasEightCharacters ? "✓" : "✗"} At least 8 characters,1 uppercase
-            letter,1 lowercase letter, 1 special character
+          {/* Title */}
+          <Text style={styles.title}>
+            Reset Password
           </Text>
-        </View>
 
-        <Text style={styles.label}>Confirm Password</Text>
-
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Confirm new password"
-            placeholderTextColor="#98A2B3"
-            secureTextEntry={!showConfirmPassword}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
-
-          <TouchableOpacity
-            onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-          >
-            <Ionicons
-              name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
-              size={22}
-              color="#1E3A5F"
-            />
-          </TouchableOpacity>
-        </View>
-        {/* Show whether both passwords are the same */}
-        {confirmPassword.length > 0 && (
-          <Text style={passwordsMatch ? styles.valid : styles.invalid}>
-            {passwordsMatch ? "✓ Passwords match" : "✗ Passwords do not match"}
+          <Text style={styles.subtitle}>
+            Create a strong new password for your account
           </Text>
-        )}
 
-        <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
-          <Text style={styles.buttonText}>Reset Password</Text>
-        </TouchableOpacity>
+          {/* New Password */}
+          <Text style={styles.label}>
+            New Password
+          </Text>
 
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Enter new password"
+              placeholderTextColor="#98A2B3"
+              secureTextEntry={!showNewPassword}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              autoCapitalize="none"
+            />
+
+            <Pressable
+              onPress={() =>
+                setShowNewPassword(!showNewPassword)
+              }
+              style={styles.eyeButton}
+            >
+              <Ionicons
+                name={
+                  showNewPassword
+                    ? "eye-off-outline"
+                    : "eye-outline"
+                }
+                size={22}
+                color="#6C63FF"
+              />
+            </Pressable>
+          </View>
+
+          {/* Password Requirements */}
+          <View style={styles.requirements}>
+            <Text style={styles.requirementTitle}>
+              Password must contain:
+            </Text>
+
+            <Requirement
+              valid={hasEightCharacters}
+              text="At least 8 characters"
+            />
+
+            <Requirement
+              valid={hasUppercase}
+              text="At least 1 uppercase letter"
+            />
+
+            <Requirement
+              valid={hasLowercase}
+              text="At least 1 lowercase letter"
+            />
+
+            <Requirement
+              valid={hasNumber}
+              text="At least 1 number"
+            />
+
+            <Requirement
+              valid={hasSpecialCharacter}
+              text="At least 1 special character"
+            />
+          </View>
+
+          {/* Confirm Password */}
+          <Text style={styles.label}>
+            Confirm Password
+          </Text>
+
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Confirm new password"
+              placeholderTextColor="#98A2B3"
+              secureTextEntry={!showConfirmPassword}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              autoCapitalize="none"
+            />
+
+            <Pressable
+              onPress={() =>
+                setShowConfirmPassword(
+                  !showConfirmPassword
+                )
+              }
+              style={styles.eyeButton}
+            >
+              <Ionicons
+                name={
+                  showConfirmPassword
+                    ? "eye-off-outline"
+                    : "eye-outline"
+                }
+                size={22}
+                color="#6C63FF"
+              />
+            </Pressable>
+          </View>
+
+          {/* Password Match */}
+          {confirmPassword.length > 0 && (
+            <Text
+              style={
+                passwordsMatch
+                  ? styles.matchValid
+                  : styles.matchInvalid
+              }
+            >
+              {passwordsMatch
+                ? "✓ Passwords match"
+                : "✗ Passwords do not match"}
+            </Text>
+          )}
+
+          {/* Reset Button */}
+          <Animated.View
+            style={{
+              width: "100%",
+              transform: [{ scale: buttonScale }],
+            }}
+          >
+            <Pressable
+              style={styles.button}
+              onPress={handleResetPassword}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+            >
+              <Text style={styles.buttonText}>
+                RESET PASSWORD
+              </Text>
+            </Pressable>
+          </Animated.View>
+
+          {/* Back */}
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Text style={styles.backText}>
+              ← Back
+            </Text>
+          </Pressable>
+        </View>
+      </AuthAnimatedCard>
     </View>
   );
 }
 
+/* --------------------------------------------------
+   Password Requirement Component
+-------------------------------------------------- */
+
+function Requirement({
+  valid,
+  text,
+}: {
+  valid: boolean;
+  text: string;
+}) {
+  return (
+    <Text
+      style={
+        valid
+          ? styles.requirementValid
+          : styles.requirementInvalid
+      }
+    >
+      {valid ? "✓" : "○"} {text}
+    </Text>
+  );
+}
+
+/* --------------------------------------------------
+   Styles
+-------------------------------------------------- */
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F7FA",
+    backgroundColor: "#EEF1F5",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+    overflow: "hidden",
   },
 
-  card: {
+  backgroundCircleOne: {
+    position: "absolute",
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "#E4E7FF",
+    top: -100,
+    right: -100,
+  },
+
+  backgroundCircleTwo: {
+    position: "absolute",
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: "#DDF7FF",
+    bottom: -100,
+    left: -100,
+  },
+
+  content: {
+    alignItems: "center",
     width: "100%",
-    maxWidth: 450,
-    backgroundColor: "#FFFFFF",
-    padding: 30,
-    borderRadius: 15,
   },
 
   title: {
-    fontSize: 30,
-    fontWeight: "bold",
-    color: "#1E3A5F",
+    marginTop: 18,
+    fontSize: 27,
+    fontWeight: "800",
+    color: "#20242C",
     textAlign: "center",
-    marginBottom: 10,
   },
 
   subtitle: {
-    fontSize: 15,
-    color: "#667085",
+    marginTop: 8,
+    marginBottom: 22,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#707782",
     textAlign: "center",
-    marginBottom: 30,
   },
 
   label: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#344054",
+    width: "100%",
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#383D46",
     marginBottom: 8,
   },
 
-  input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: "#D0D5DD",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    marginBottom: 20,
+  passwordContainer: {
+    width: "100%",
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: "#EEF1F5",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingLeft: 16,
+    paddingRight: 12,
+    marginBottom: 14,
+
+    shadowColor: "#FFFFFF",
+    shadowOffset: {
+      width: -4,
+      height: -4,
+    },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+
+    elevation: 3,
+  },
+
+  passwordInput: {
+    flex: 1,
+    height: "100%",
+    fontSize: 15,
+    color: "#20242C",
+  },
+
+  eyeButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  requirements: {
+    width: "100%",
+    backgroundColor: "#E9ECF1",
+    borderRadius: 14,
+    padding: 13,
+    marginBottom: 18,
+  },
+
+  requirementTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#383D46",
+    marginBottom: 6,
+  },
+
+  requirementValid: {
+    fontSize: 12,
+    color: "#16803C",
+    marginTop: 3,
+    fontWeight: "600",
+  },
+
+  requirementInvalid: {
+    fontSize: 12,
+    color: "#8A8F98",
+    marginTop: 3,
+  },
+
+  matchValid: {
+    width: "100%",
+    color: "#16803C",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: -6,
+    marginBottom: 5,
+  },
+
+  matchInvalid: {
+    width: "100%",
+    color: "#D14343",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: -6,
+    marginBottom: 5,
   },
 
   button: {
-    height: 50,
-    backgroundColor: "#062148",
-    borderRadius: 10,
+    width: "100%",
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: "#6C63FF",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 12,
+
+    shadowColor: "#6C63FF",
+    shadowOffset: {
+      width: 0,
+      height: 7,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 7,
   },
 
   buttonText: {
     color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "bold",
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+
+  backButton: {
+    marginTop: 18,
   },
 
   backText: {
-    color: "#1E3A5F",
-    textAlign: "center",
-    marginTop: 25,
-    fontWeight: "600",
-  },
-
-  // Password requirements box
-  requirements: {
-    marginTop: -10,
-    marginBottom: 15,
-    padding: 12,
-    backgroundColor: "#F8F9FA",
-    borderRadius: 8,
-  },
-
-  // Password requirements heading
-  requirementTitle: {
+    color: "#6C63FF",
     fontSize: 14,
-    fontWeight: "600",
-    color: "#344054",
-    marginBottom: 3,
-  },
-
-  // Green text when requirement is satisfied
-  valid: {
-    color: "green",
-    fontSize: 13,
-    marginTop: 2,
-  },
-
-  // Red text when requirement is not satisfied
-  invalid: {
-    color: "red",
-    fontSize: 13,
-    marginTop: 2,
-  },
-  // Container for password input and Show/Hide button
-  passwordContainer: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: "#D0D5DD",
-    borderRadius: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingLeft: 15,
-    paddingRight: 15,
-    marginBottom: 20,
-  },
-
-  // Password input takes the available space
-  passwordInput: {
-    flex: 1,
-    fontSize: 16,
+    fontWeight: "700",
   },
 });

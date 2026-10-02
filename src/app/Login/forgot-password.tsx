@@ -1,23 +1,49 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
+  Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  Alert,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { router } from "expo-router";
 
-export default function ForgotPasswordScreen() {
+import AuthAnimatedCard from "../components/AuthAnimatedCard";
+import EmbossedIcon from "../components/EmbossedIcon";
+
+export default function ForgotPassword() {
   const [email, setEmail] = useState("");
 
-  const handleContinue = () => {
+  const buttonScale = useRef(new Animated.Value(1)).current;
+  const glow = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, {
+          toValue: 1,
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(glow, {
+          toValue: 0,
+          duration: 1800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const handleSendOTP = () => {
     if (!email.trim()) {
-      Alert.alert("Email Required", "Please enter your registered email.");
+      Alert.alert("Email Required", "Please enter your email address.");
       return;
     }
 
@@ -29,89 +55,83 @@ export default function ForgotPasswordScreen() {
     router.push("/Login/otp");
   };
 
+  const handlePressIn = () => {
+    Animated.spring(buttonScale, {
+      toValue: 0.96,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(buttonScale, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* HEADER */}
-        <View style={styles.header}>
-          <View style={styles.brand}>
-            <View style={styles.logo}>
-              <View style={styles.crossVertical} />
-              <View style={styles.crossHorizontal} />
-            </View>
+      <View style={styles.backgroundCircleOne} />
+      <View style={styles.backgroundCircleTwo} />
 
-            <View>
-              <Text style={styles.logoText}>MEDICARE</Text>
-              <Text style={styles.logoSubText}>
-                Medicine Shop Management
-              </Text>
-            </View>
-          </View>
+      <AuthAnimatedCard>
+        <View style={styles.content}>
+          <EmbossedIcon icon="🔒" />
 
-          <Text style={styles.help}>Help</Text>
-        </View>
-
-        {/* CARD */}
-        <View style={styles.card}>
-          <View style={styles.iconContainer}>
-            <View style={styles.lockBody} />
-            <View style={styles.lockTop} />
-          </View>
-
-          <Text style={styles.title}>Forgot Password?</Text>
-
-          <Text style={styles.description}>
-            Enter your registered email address and we'll help you securely
-            reset your password.
+          <Text style={styles.title}>
+            Forgot Password?
           </Text>
 
-          <Text style={styles.label}>Registered Email</Text>
+          <Text style={styles.description}>
+            Enter your registered email address and we will
+            send you an OTP to reset your password.
+          </Text>
+
+          <Text style={styles.label}>
+            Email Address
+          </Text>
 
           <TextInput
             style={styles.input}
-            placeholder="Enter your email address"
-            placeholderTextColor="#8AA0A7"
+            placeholder="Enter your email"
+            placeholderTextColor="#999"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
-            autoCorrect={false}
           />
 
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleContinue}
+          <Animated.View
+            style={{
+              transform: [{ scale: buttonScale }],
+              width: "100%",
+            }}
           >
-            <Text style={styles.continueText}>Continue</Text>
-          </TouchableOpacity>
+            <Pressable
+              style={styles.button}
+              onPress={handleSendOTP}
+              onPressIn={handlePressIn}
+              onPressOut={handlePressOut}
+            >
+              <Text style={styles.buttonText}>
+                SEND OTP
+              </Text>
+            </Pressable>
+          </Animated.View>
 
-          <TouchableOpacity
-            style={styles.backButton}
+          <Pressable
             onPress={() => router.back()}
+            style={styles.backButton}
           >
-            <Text style={styles.backText}>← Back to Sign In</Text>
-          </TouchableOpacity>
-
-          <View style={styles.securityBox}>
-            <Text style={styles.securityTitle}>🔒 Secure Password Recovery</Text>
-
-            <Text style={styles.securityText}>
-              Your account information is protected. Verification is required
-              before changing your password.
+            <Text style={styles.backText}>
+              ← Back to Login
             </Text>
-          </View>
+          </Pressable>
         </View>
-
-        <Text style={styles.footer}>
-          © 2026 MEDICARE • Secure • Simple • Reliable
-        </Text>
-      </ScrollView>
+      </AuthAnimatedCard>
     </KeyboardAvoidingView>
   );
 }
@@ -119,207 +139,114 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F9FA",
-  },
-
-  scroll: {
-    flexGrow: 1,
-  },
-
-  header: {
-    height: 82,
-    backgroundColor: "#083C4A",
-    paddingHorizontal: 35,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  brand: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  logo: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
+    backgroundColor: "#EEF1F5",
     justifyContent: "center",
-    marginRight: 12,
-  },
-
-  crossVertical: {
-    position: "absolute",
-    width: 9,
-    height: 27,
-    backgroundColor: "#0D5367",
-    borderRadius: 2,
-  },
-
-  crossHorizontal: {
-    position: "absolute",
-    width: 27,
-    height: 9,
-    backgroundColor: "#0D5367",
-    borderRadius: 2,
-  },
-
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 19,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-
-  logoSubText: {
-    color: "#B7D7DE",
-    fontSize: 9,
-    marginTop: 2,
-  },
-
-  help: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  card: {
-    width: "90%",
-    maxWidth: 470,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 22,
-    padding: 34,
-    alignSelf: "center",
-    marginTop: 55,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: {
-      width: 0,
-      height: 7,
-    },
-    elevation: 4,
-  },
-
-  iconContainer: {
-    width: 58,
-    height: 58,
-    borderRadius: 17,
-    backgroundColor: "#EAF6F8",
-    alignSelf: "center",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
+    padding: 20,
+    overflow: "hidden",
   },
 
-  lockBody: {
-    width: 25,
-    height: 21,
-    backgroundColor: "#0D5367",
-    borderRadius: 5,
+  backgroundCircleOne: {
     position: "absolute",
-    bottom: 13,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: "#E4E7FF",
+    top: -100,
+    right: -100,
   },
 
-  lockTop: {
-    width: 17,
-    height: 18,
-    borderWidth: 4,
-    borderColor: "#0D5367",
-    borderBottomWidth: 0,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+  backgroundCircleTwo: {
     position: "absolute",
-    top: 13,
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: "#DDF7FF",
+    bottom: -100,
+    left: -100,
+  },
+
+  content: {
+    alignItems: "center",
   },
 
   title: {
-    color: "#153B47",
-    fontSize: 29,
+    marginTop: 22,
+    fontSize: 28,
     fontWeight: "800",
+    color: "#20242C",
     textAlign: "center",
   },
 
   description: {
-    color: "#70868D",
+    marginTop: 10,
     fontSize: 14,
     lineHeight: 21,
+    color: "#707782",
     textAlign: "center",
-    marginTop: 10,
-    marginBottom: 30,
+    marginBottom: 28,
   },
 
   label: {
-    color: "#153B47",
-    fontSize: 13,
+    width: "100%",
+    fontSize: 14,
     fontWeight: "700",
+    color: "#383D46",
     marginBottom: 8,
   },
 
   input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: "#D7E5E8",
-    borderRadius: 11,
-    backgroundColor: "#FAFCFC",
-    paddingHorizontal: 15,
-    color: "#153B47",
-    fontSize: 14,
+    width: "100%",
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: "#EEF1F5",
+    paddingHorizontal: 18,
+    fontSize: 15,
+    color: "#20242C",
+    marginBottom: 20,
+
+    shadowColor: "#FFFFFF",
+    shadowOffset: {
+      width: -4,
+      height: -4,
+    },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+
+    elevation: 3,
   },
 
-  continueButton: {
-    height: 52,
-    backgroundColor: "#0D5367",
-    borderRadius: 11,
-    alignItems: "center",
+  button: {
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: "#6C63FF",
     justifyContent: "center",
-    marginTop: 22,
+    alignItems: "center",
+
+    shadowColor: "#6C63FF",
+    shadowOffset: {
+      width: 0,
+      height: 7,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 7,
   },
 
-  continueText: {
+  buttonText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "800",
+    letterSpacing: 1,
   },
 
   backButton: {
-    alignItems: "center",
-    marginTop: 20,
+    marginTop: 22,
   },
 
   backText: {
-    color: "#0A829A",
-    fontSize: 13,
+    color: "#6C63FF",
+    fontSize: 14,
     fontWeight: "700",
-  },
-
-  securityBox: {
-    backgroundColor: "#F5F9FA",
-    borderRadius: 12,
-    padding: 15,
-    marginTop: 25,
-  },
-
-  securityTitle: {
-    color: "#153B47",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-
-  securityText: {
-    color: "#70868D",
-    fontSize: 11,
-    lineHeight: 17,
-    marginTop: 5,
-  },
-
-  footer: {
-    textAlign: "center",
-    color: "#8AA0A7",
-    fontSize: 11,
-    marginTop: 30,
-    marginBottom: 30,
   },
 });

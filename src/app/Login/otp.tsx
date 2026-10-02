@@ -1,31 +1,39 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
+  Animated,
+  Easing,
+  Keyboard,
   StyleSheet,
+  Text,
   TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
 
-export default function OTPPage() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
+import AuthAnimatedCard from "../components/AuthAnimatedCard";
 
-  const email =
-    typeof params.email === "string"
-      ? params.email
-      : "your email";
-
+export default function OTP() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [timer, setTimer] = useState(59);
+  const [timer, setTimer] = useState(21);
   const [error, setError] = useState("");
 
-  const inputs = useRef<Array<TextInput | null>>([]);
+  const [verified, setVerified] = useState(false);
 
+  const inputRefs = useRef<Array<TextInput | null>>([]);
+
+  // Fill animation for each OTP box
+  const fillAnimations = useRef(
+    Array.from({ length: 6 }, () => new Animated.Value(0))
+  ).current;
+
+  // Green success animation
+  const successScale = useRef(new Animated.Value(0)).current;
+  const successOpacity = useRef(new Animated.Value(0)).current;
+
+  // Checkmark animation
+  const checkScale = useRef(new Animated.Value(0)).current;
+
+  // Timer
   useEffect(() => {
     if (timer <= 0) return;
 
@@ -36,37 +44,53 @@ export default function OTPPage() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  const handleChange = (
-    value: string,
-    index: number
-  ) => {
-    const cleanValue = value.replace(/[^0-9]/g, "");
+  // Animate OTP box from bottom to top
+  const animateFill = (index: number, filled: boolean) => {
+    Animated.timing(fillAnimations[index], {
+      toValue: filled ? 1 : 0,
+      duration: 300,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  };
 
-    const newOtp = [...otp];
-    newOtp[index] = cleanValue.slice(-1);
+  // Handle OTP input
+  const handleOTPChange = (value: string, index: number) => {
+    const digit = value.replace(/[^0-9]/g, "").slice(-1);
 
-    setOtp(newOtp);
+    const newOTP = [...otp];
+    newOTP[index] = digit;
+
+    setOtp(newOTP);
     setError("");
 
-    if (cleanValue && index < 5) {
-      inputs.current[index + 1]?.focus();
+    animateFill(index, digit !== "");
+
+    // Move to next box
+    if (digit && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+
+    // Hide keyboard after last digit
+    if (digit && index === 5) {
+      Keyboard.dismiss();
     }
   };
 
+  // Handle backspace
   const handleKeyPress = (
     event: any,
     index: number
   ) => {
-    if (
-      event.nativeEvent.key === "Backspace" &&
-      !otp[index] &&
-      index > 0
-    ) {
-      inputs.current[index - 1]?.focus();
+    if (event.nativeEvent.key === "Backspace") {
+      if (otp[index] === "" && index > 0) {
+        inputRefs.current[index - 1]?.focus();
+      }
     }
   };
 
-  const handleVerify = () => {
+  // Verify OTP
+  const verifyOTP = () => {
     const enteredOTP = otp.join("");
 
     if (enteredOTP.length !== 6) {
@@ -74,410 +98,440 @@ export default function OTPPage() {
       return;
     }
 
-    setError("");
+    // Demo OTP
+    if (enteredOTP !== "234234") {
+      setError("Invalid OTP. Please try again.");
+      return;
+    }
 
-    router.push("/Login/reset-password");
+    setError("");
+    setVerified(true);
+
+    // Animate all boxes to green
+    Animated.parallel(
+      fillAnimations.map((animation) =>
+        Animated.timing(animation, {
+          toValue: 1,
+          duration: 350,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        })
+      )
+    ).start();
+
+    // Success animation
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(successScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+
+        Animated.timing(successOpacity, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]),
+
+      Animated.sequence([
+        Animated.spring(checkScale, {
+          toValue: 1.2,
+          friction: 4,
+          tension: 100,
+          useNativeDriver: true,
+        }),
+
+        Animated.spring(checkScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
   };
 
   const resendOTP = () => {
+    setTimer(21);
     setOtp(["", "", "", "", "", ""]);
-    setTimer(59);
     setError("");
-    inputs.current[0]?.focus();
+    setVerified(false);
+
+    fillAnimations.forEach((animation) => {
+      animation.setValue(0);
+    });
+
+    successScale.setValue(0);
+    successOpacity.setValue(0);
+    checkScale.setValue(0);
+
+    inputRefs.current[0]?.focus();
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* HEADER */}
-
+    <View style={styles.container}>
+      <AuthAnimatedCard>
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.logoBox}>
-              <View style={styles.crossVertical} />
-              <View style={styles.crossHorizontal} />
-            </View>
+          <Text style={styles.title}>Verify OTP</Text>
 
-            <View>
-              <Text style={styles.logoText}>MEDICARE</Text>
-
-              <Text style={styles.logoSubText}>
-                Medicine Management
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.helpText}>Help</Text>
+          <Text style={styles.subtitle}>
+            Enter the 6-digit OTP sent to your email
+          </Text>
         </View>
 
-        {/* MAIN */}
+        {/* OTP BOXES */}
+        <View style={styles.otpContainer}>
+          {otp.map((digit, index) => {
+            /*
+             * ScaleY starts from 0 and grows to 1.
+             * The transformOrigin effect is simulated by
+             * positioning the fill at the bottom.
+             */
+            const scaleY = fillAnimations[index].interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, 1],
+            });
 
-        <View style={styles.main}>
-          <View style={styles.card}>
-            <View style={styles.iconCircle}>
-              <Text style={styles.iconText}>@</Text>
-            </View>
+            const translateY = fillAnimations[index].interpolate({
+              inputRange: [0, 1],
+              outputRange: [25, 0],
+            });
 
-            <Text style={styles.title}>
-              Verify your email
-            </Text>
+            const fillOpacity = fillAnimations[index].interpolate({
+              inputRange: [0, 0.2, 1],
+              outputRange: [0, 0.7, 1],
+            });
 
-            <Text style={styles.description}>
-              We sent a 6-digit verification code to
-            </Text>
-
-            <Text style={styles.email}>
-              {email}
-            </Text>
-
-            {/* OTP */}
-
-            <Text style={styles.label}>
-              Verification code
-            </Text>
-
-            <View style={styles.otpContainer}>
-              {otp.map((value, index) => (
-                <TextInput
-                  key={index}
-                  ref={(ref) => {
-                    inputs.current[index] = ref;
-                  }}
+            return (
+              <View key={index} style={styles.otpBoxWrapper}>
+                {/* Animated bottom-to-top fill */}
+                <Animated.View
+                  pointerEvents="none"
                   style={[
-                    styles.otpInput,
-                    error ? styles.otpError : null,
+                    styles.otpFill,
+                    {
+                      opacity: fillOpacity,
+                      transform: [
+                        {
+                          translateY,
+                        },
+                        {
+                          scaleY,
+                        },
+                      ],
+                    },
+                    verified && styles.verifiedFill,
                   ]}
-                  value={value}
-                  onChangeText={(text) =>
-                    handleChange(text, index)
+                />
+
+                <TextInput
+                  ref={(ref) => {
+                    inputRefs.current[index] = ref;
+                  }}
+                  value={digit}
+                  onChangeText={(value) =>
+                    handleOTPChange(value, index)
                   }
                   onKeyPress={(event) =>
                     handleKeyPress(event, index)
                   }
                   keyboardType="number-pad"
                   maxLength={1}
+                  editable={!verified}
+                  style={[
+                    styles.otpInput,
+                    verified && styles.verifiedText,
+                  ]}
                   textAlign="center"
                   selectTextOnFocus
                 />
-              ))}
-            </View>
-
-            {error ? (
-              <Text style={styles.errorText}>
-                {error}
-              </Text>
-            ) : null}
-
-            {/* TIMER */}
-
-            <View style={styles.timerRow}>
-              <Text style={styles.timerLabel}>
-                Code expires in
-              </Text>
-
-              <Text style={styles.timer}>
-                00:{timer.toString().padStart(2, "0")}
-              </Text>
-            </View>
-
-            {/* VERIFY */}
-
-            <Pressable
-              style={styles.primaryButton}
-              onPress={handleVerify}
-            >
-              <Text style={styles.primaryButtonText}>
-                Verify OTP →
-              </Text>
-            </Pressable>
-
-            {/* RESEND */}
-
-            <View style={styles.resendContainer}>
-              <Text style={styles.resendText}>
-                Didn't receive the code?
-              </Text>
-
-              <Pressable
-                onPress={resendOTP}
-                disabled={timer > 0}
-              >
-                <Text
-                  style={[
-                    styles.resendButton,
-                    timer > 0 &&
-                      styles.resendDisabled,
-                  ]}
-                >
-                  Resend OTP
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* BACK */}
-
-            <Pressable
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.backText}>
-                ← Back
-              </Text>
-            </Pressable>
-          </View>
+              </View>
+            );
+          })}
         </View>
 
-        <Text style={styles.footer}>
-          © 2026 MEDICARE • Secure • Simple • Reliable
-        </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        {/* ERROR */}
+        {error !== "" && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
+
+        {/* TIMER */}
+        {!verified && (
+          <View style={styles.timerContainer}>
+            <Text style={styles.timerText}>
+              OTP expires in{" "}
+              <Text style={styles.timerNumber}>
+                {timer}s
+              </Text>
+            </Text>
+          </View>
+        )}
+
+        {/* VERIFY BUTTON */}
+        {!verified && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.verifyButton}
+            onPress={verifyOTP}
+          >
+            <Text style={styles.verifyButtonText}>
+              Verify OTP
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* RESEND */}
+        {!verified && (
+          <TouchableOpacity
+            onPress={resendOTP}
+            disabled={timer > 0}
+            style={styles.resendButton}
+          >
+            <Text
+              style={[
+                styles.resendText,
+                timer > 0 && styles.resendDisabled,
+              ]}
+            >
+              Resend OTP
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* SUCCESS */}
+        {verified && (
+          <Animated.View
+            style={[
+              styles.successContainer,
+              {
+                opacity: successOpacity,
+                transform: [
+                  {
+                    scale: successScale,
+                  },
+                ],
+              },
+            ]}
+          >
+            <Animated.View
+              style={[
+                styles.checkCircle,
+                {
+                  transform: [
+                    {
+                      scale: checkScale,
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Text style={styles.checkMark}>✓</Text>
+            </Animated.View>
+
+            <Text style={styles.successTitle}>
+              OTP Verified
+            </Text>
+
+            <Text style={styles.successMessage}>
+              Your OTP has been verified successfully.
+            </Text>
+          </Animated.View>
+        )}
+      </AuthAnimatedCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F9FA",
-  },
-
-  scrollContent: {
-    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#EEF2F7",
   },
 
   header: {
-    height: 82,
-    backgroundColor: "#0D5367",
-    paddingHorizontal: 30,
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  logoBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 13,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-
-  crossVertical: {
-    position: "absolute",
-    width: 9,
-    height: 27,
-    backgroundColor: "#0D5367",
-    borderRadius: 2,
-  },
-
-  crossHorizontal: {
-    position: "absolute",
-    width: 27,
-    height: 9,
-    backgroundColor: "#0D5367",
-    borderRadius: 2,
-  },
-
-  logoText: {
-    color: "#FFFFFF",
-    fontSize: 19,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-
-  logoSubText: {
-    color: "#CDE9EE",
-    fontSize: 10,
-    marginTop: 2,
-  },
-
-  helpText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  main: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-
-  card: {
-    width: "100%",
-    maxWidth: 470,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 32,
-    elevation: 8,
-    shadowColor: "#0D5367",
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: {
-      width: 0,
-      height: 7,
-    },
-  },
-
-  iconCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "#EAF6F8",
-    alignSelf: "center",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-  },
-
-  iconText: {
-    color: "#0D5367",
-    fontSize: 25,
-    fontWeight: "800",
-  },
-
-  title: {
-    color: "#153B47",
-    fontSize: 28,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-
-  description: {
-    color: "#70868D",
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 12,
-  },
-
-  email: {
-    color: "#0D5367",
-    fontSize: 14,
-    fontWeight: "800",
-    textAlign: "center",
-    marginTop: 6,
     marginBottom: 30,
   },
 
-  label: {
-    color: "#153B47",
-    fontSize: 14,
+  title: {
+    fontSize: 28,
     fontWeight: "700",
-    marginBottom: 12,
+    color: "#20242A",
+    marginBottom: 8,
+  },
+
+  subtitle: {
+    fontSize: 14,
+    color: "#777F89",
+    textAlign: "center",
+    lineHeight: 21,
   },
 
   otpContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 18,
+  },
+
+  otpBoxWrapper: {
+    width: 45,
+    height: 55,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#E7EBF0",
+    borderWidth: 1,
+    borderColor: "#D4DAE1",
+    position: "relative",
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 2,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  /*
+   * This is the colored layer.
+   * It starts at the bottom and grows upward.
+   */
+  otpFill: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "100%",
+    backgroundColor: "65#6C63FF",
+    borderRadius: 11,
+  },
+
+  verifiedFill: {
+    backgroundColor: "#22C55E",
   },
 
   otpInput: {
-    width: 48,
-    height: 55,
-    borderWidth: 1,
-    borderColor: "#D4E5E8",
-    borderRadius: 10,
-    backgroundColor: "#F9FCFC",
-    color: "#153B47",
-    fontSize: 20,
-    fontWeight: "800",
+    width: "100%",
+    height: "100%",
+    fontSize: 23,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    zIndex: 2,
   },
 
-  otpError: {
-    borderColor: "#D9534F",
+  verifiedText: {
+    color: "#FFFFFF",
   },
 
   errorText: {
-    color: "#D9534F",
-    fontSize: 12,
-    marginTop: 8,
-  },
-
-  timerRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 22,
-    gap: 5,
-  },
-
-  timerLabel: {
-    color: "#70868D",
+    color: "#E53935",
     fontSize: 13,
+    textAlign: "center",
+    marginBottom: 12,
   },
 
-  timer: {
-    color: "#0D5367",
+  timerContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  timerText: {
     fontSize: 13,
-    fontWeight: "800",
+    color: "#777F89",
   },
 
-  primaryButton: {
+  timerNumber: {
+    fontWeight: "700",
+    color: "#0e0d0d",
+  },
+
+  verifyButton: {
     height: 52,
-    backgroundColor: "#0D5367",
-    borderRadius: 10,
-    alignItems: "center",
+    borderRadius: 14,
+    backgroundColor: "#6C63FF",
     justifyContent: "center",
-    marginTop: 22,
+    alignItems: "center",
+    marginTop: 5,
+
+    shadowColor: "#6ab69f",
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
   },
 
-  primaryButtonText: {
+  verifyButtonText: {
     color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-
-  resendContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 20,
-    gap: 5,
-  },
-
-  resendText: {
-    color: "#70868D",
-    fontSize: 13,
-  },
-
-  resendButton: {
-    color: "#0A829A",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-
-  resendDisabled: {
-    color: "#AABBC0",
-  },
-
-  backButton: {
-    alignItems: "center",
-    marginTop: 20,
-  },
-
-  backText: {
-    color: "#0A829A",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
   },
 
-  footer: {
-    textAlign: "center",
-    color: "#82979D",
-    fontSize: 11,
-    paddingBottom: 25,
+  resendButton: {
+    alignItems: "center",
+    marginTop: 18,
   },
-}); 
+
+  resendText: {
+    color: "#7a74e5",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  resendDisabled: {
+    color: "#AAB0B8",
+  },
+
+  successContainer: {
+    alignItems: "center",
+    marginTop: 20,
+  },
+
+  checkCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#22C55E",
+    justifyContent: "center",
+    alignItems: "center",
+
+    shadowColor: "#22C55E",
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+
+  checkMark: {
+    color: "#FFFFFF",
+    fontSize: 34,
+    fontWeight: "700",
+  },
+
+  successTitle: {
+    marginTop: 14,// 
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#22A447",
+  },
+
+  successMessage: {
+    marginTop: 5,
+    fontSize: 13,
+    color: "#777F89",
+    textAlign: "center",
+  },
+});

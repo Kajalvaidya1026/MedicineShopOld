@@ -1,19 +1,24 @@
 import { useEffect, useRef, useState } from "react";
+import AnimatedCard from "../components/AnimatedCard";
 import {
   Alert,
+  Animated,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 
 type LoginStep = "login" | "forgot" | "otp" | "reset" | "success";
 
 export default function HomeScreen() {
   const [showLogin, setShowLogin] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const heroAnimation = useRef(new Animated.Value(0)).current;
+  const medicineAnimation = useRef(new Animated.Value(0)).current;
 
   const [loginStep, setLoginStep] = useState<LoginStep>("login");
 
@@ -26,10 +31,16 @@ export default function HomeScreen() {
 
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
+
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [seconds, setSeconds] = useState(300);
+
+  /* =====================================================
+     OTP TIMER
+  ===================================================== */
+
   useEffect(() => {
     if (loginStep !== "otp" || seconds <= 0) {
       return;
@@ -42,14 +53,18 @@ export default function HomeScreen() {
     return () => clearInterval(timer);
   }, [loginStep, seconds]);
 
-  /* ---------------- OPEN LOGIN ---------------- */
+  /* =====================================================
+     OPEN LOGIN
+  ===================================================== */
 
   const openLogin = () => {
     setLoginStep("login");
     setShowLogin(true);
   };
 
-  /* ---------------- CLOSE LOGIN ---------------- */
+  /* =====================================================
+     CLOSE LOGIN
+  ===================================================== */
 
   const closeLogin = () => {
     setShowLogin(false);
@@ -59,7 +74,9 @@ export default function HomeScreen() {
     }, 200);
   };
 
-  /* ---------------- LOGIN ---------------- */
+  /* =====================================================
+     LOGIN
+  ===================================================== */
 
   const handleLogin = () => {
     if (!email.trim() || !password.trim()) {
@@ -73,7 +90,9 @@ export default function HomeScreen() {
     );
   };
 
-  /* ---------------- FORGOT PASSWORD ---------------- */
+  /* =====================================================
+     FORGOT PASSWORD
+  ===================================================== */
 
   const openForgotPassword = () => {
     setLoginStep("forgot");
@@ -95,13 +114,14 @@ export default function HomeScreen() {
     }
 
     setEmail(trimmedEmail);
-
+    setOtp(["", "", "", "", "", ""]);
     setSeconds(300);
-
     setLoginStep("otp");
   };
 
-  /* ---------------- OTP ---------------- */
+  /* =====================================================
+     OTP
+  ===================================================== */
 
   const handleOTPChange = (value: string, index: number) => {
     const number = value.replace(/[^0-9]/g, "");
@@ -114,6 +134,7 @@ export default function HomeScreen() {
     }
 
     const updatedOTP = [...otp];
+
     updatedOTP[index] = number.slice(-1);
 
     setOtp(updatedOTP);
@@ -124,6 +145,14 @@ export default function HomeScreen() {
   };
 
   const verifyOTP = () => {
+    if (seconds <= 0) {
+      Alert.alert(
+        "OTP Expired",
+        "Your OTP has expired. Please request a new OTP.",
+      );
+      return;
+    }
+
     const code = otp.join("");
 
     if (code.length !== 6) {
@@ -136,13 +165,14 @@ export default function HomeScreen() {
 
   const resendOTP = () => {
     setOtp(["", "", "", "", "", ""]);
-
     setSeconds(300);
 
     Alert.alert("OTP Sent", "A new OTP has been generated.");
   };
 
-  /* ---------------- PASSWORD ---------------- */
+  /* =====================================================
+     PASSWORD RESET
+  ===================================================== */
 
   const resetPassword = () => {
     if (!newPassword) {
@@ -198,7 +228,9 @@ export default function HomeScreen() {
     setLoginStep("success");
   };
 
-  /* ---------------- BACK ---------------- */
+  /* =====================================================
+     BACK BUTTON
+  ===================================================== */
 
   const goBack = () => {
     if (loginStep === "forgot") {
@@ -212,12 +244,46 @@ export default function HomeScreen() {
     }
   };
 
+  /* =====================================================
+     RESET AUTH FORM
+  ===================================================== */
+
+  const resetAuthForm = () => {
+    setEmail("");
+    setPassword("");
+    setOtp(["", "", "", "", "", ""]);
+    setNewPassword("");
+    setConfirmPassword("");
+
+    setShowPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+
+    setSeconds(300);
+  };
+
+  /* =====================================================
+     UI
+  ===================================================== */
+
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ================= HEADER ================= */}
+      {/* =================================================
+          MAIN PAGE
+      ================================================= */}
 
-        <View style={styles.header}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={(event) => {
+          setScrollY(event.nativeEvent.contentOffset.y);
+        }}
+        scrollEventThrottle={16}
+      >
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <View style={[styles.header, scrollY > 50 && styles.headerScrolled]}>
           <View style={styles.brandContainer}>
             <View style={styles.logoBox}>
               <View style={styles.crossVertical} />
@@ -239,7 +305,9 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ================= HERO ================= */}
+        {/* =================================================
+            HERO
+        ================================================= */}
 
         <View style={styles.hero}>
           <View style={styles.heroContent}>
@@ -287,7 +355,9 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ================= SERVICES ================= */}
+        {/* =================================================
+            SERVICES
+        ================================================= */}
 
         <View style={styles.section}>
           <Text style={styles.sectionSmallTitle}>OUR SYSTEM</Text>
@@ -335,7 +405,9 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ================= CTA ================= */}
+        {/* =================================================
+            CTA
+        ================================================= */}
 
         <View style={styles.cta}>
           <Text style={styles.ctaTitle}>Ready to Get Started?</Text>
@@ -349,7 +421,9 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ================= FOOTER ================= */}
+        {/* =================================================
+            FOOTER
+        ================================================= */}
 
         <View style={styles.footer}>
           <Text style={styles.footerBrand}>MEDICARE</Text>
@@ -362,9 +436,9 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
 
-      {/* ================================================= */}
-      {/* LOGIN / PASSWORD RECOVERY MODAL                  */}
-      {/* ================================================= */}
+      {/* =================================================
+          LOGIN / PASSWORD RECOVERY MODAL
+      ================================================= */}
 
       <Modal
         visible={showLogin}
@@ -379,344 +453,389 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.closeButton} onPress={closeLogin}>
               <Text style={styles.closeText}>×</Text>
             </TouchableOpacity>
+
+            {/* LOGIN CONTENT SCROLL */}
+
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.loginScrollContent}
-            ></ScrollView>
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* =================================================
+                  LOGIN
+              ================================================= */}
 
-            {/* ================= LOGIN ================= */}
+              {loginStep === "login" && (
+                <>
+                  <View style={styles.loginLogo}>
+                    <View style={styles.loginCrossVertical} />
+                    <View style={styles.loginCrossHorizontal} />
+                  </View>
 
-            {loginStep === "login" && (
-              <>
-                <View style={styles.loginLogo}>
-                  <View style={styles.loginCrossVertical} />
-                  <View style={styles.loginCrossHorizontal} />
-                </View>
+                  <Text style={styles.loginTitle}>Welcome Back</Text>
 
-                <Text style={styles.loginTitle}>Welcome Back</Text>
-
-                <Text style={styles.loginSubtitle}>
-                  Login to your Medicine Shop account
-                </Text>
-
-                <Text style={styles.inputLabel}>Email Address</Text>
-
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#8AA0A7"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-
-                <Text style={styles.inputLabel}>Password</Text>
-
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#8AA0A7"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                />
-
-                <TouchableOpacity
-                  style={styles.forgotButton}
-                  onPress={openForgotPassword}
-                >
-                  <Text style={styles.forgotText}>Forgot Password?</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.loginButton}
-                  onPress={handleLogin}
-                >
-                  <Text style={styles.loginButtonText}>Login</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.securityText}>
-                  🔒 Your login information is securely protected.
-                </Text>
-              </>
-            )}
-
-            {/* ================= FORGOT ================= */}
-
-            {loginStep === "forgot" && (
-              <>
-                <View style={styles.stepIcon}>
-                  <Text style={styles.stepIconText}>🔐</Text>
-                </View>
-
-                <Text style={styles.loginTitle}>Forgot Password?</Text>
-
-                <Text style={styles.loginSubtitle}>
-                  Enter your registered email and we'll help you securely reset
-                  your password.
-                </Text>
-
-                <Text style={styles.inputLabel}>Registered Email</Text>
-
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email address"
-                  placeholderTextColor="#8AA0A7"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-
-                <TouchableOpacity style={styles.loginButton} onPress={sendOTP}>
-                  <Text style={styles.loginButtonText}>Send OTP</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                  <Text style={styles.backText}>← Back to Sign In</Text>
-                </TouchableOpacity>
-
-                <View style={styles.securityBox}>
-                  <Text style={styles.securityTitle}>
-                    🔒 Secure Password Recovery
+                  <Text style={styles.loginSubtitle}>
+                    Login to your Medicine Shop account
                   </Text>
+
+                  <Text style={styles.inputLabel}>Email Address</Text>
+
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your email"
+                    placeholderTextColor="#8AA0A7"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+
+                  <Text style={styles.inputLabel}>Password</Text>
+
+                  <View style={styles.passwordInputWrapper}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Enter your password"
+                      placeholderTextColor="#8AA0A7"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                    />
+
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      <Text style={styles.eyeText}>👁</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.forgotButton}
+                    onPress={openForgotPassword}
+                  >
+                    <Text style={styles.forgotText}>Forgot Password?</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.loginButton}
+                    onPress={handleLogin}
+                  >
+                    <Text style={styles.loginButtonText}>Login</Text>
+                  </TouchableOpacity>
 
                   <Text style={styles.securityText}>
-                    Verification is required before changing your password.
+                    🔒 Your login information is securely protected.
                   </Text>
-                </View>
-              </>
-            )}
+                </>
+              )}
 
-            {/* ================= OTP ================= */}
+              {/* =================================================
+                  FORGOT PASSWORD
+              ================================================= */}
 
-            {loginStep === "otp" && (
-              <>
-                <View style={styles.stepIcon}>
-                  <Text style={styles.stepIconText}>✉</Text>
-                </View>
+              {loginStep === "forgot" && (
+                <>
+                  <View style={styles.stepIcon}>
+                    <Text style={styles.stepIconText}>🔐</Text>
+                  </View>
 
-                <Text style={styles.loginTitle}>Verify Your Email</Text>
+                  <Text style={styles.loginTitle}>Forgot Password?</Text>
 
-                <Text style={styles.loginSubtitle}>
-                  Enter the 6-digit verification code sent to your registered
-                  email.
-                </Text>
-
-                <View style={styles.otpContainer}>
-                  {otp.map((digit, index) => (
-                    <TextInput
-                      key={index}
-                      ref={(ref) => {
-                        otpRefs.current[index] = ref;
-                      }}
-                      style={[styles.otpInput, digit ? styles.otpFilled : null]}
-                      value={digit}
-                      onChangeText={(value) => handleOTPChange(value, index)}
-                      keyboardType="number-pad"
-                      maxLength={1}
-                      textAlign="center"
-                    />
-                  ))}
-                </View>
-
-                <Text style={styles.timer}>
-                  Code expires in{" "}
-                  <Text style={styles.timerBold}>
-                    {Math.floor(seconds / 60)}:
-                    {String(seconds % 60).padStart(2, "0")}
+                  <Text style={styles.loginSubtitle}>
+                    Enter your registered email and we'll help you securely
+                    reset your password.
                   </Text>
-                </Text>
 
-                <TouchableOpacity
-                  style={styles.loginButton}
-                  onPress={verifyOTP}
-                >
-                  <Text style={styles.loginButtonText}>Verify OTP</Text>
-                </TouchableOpacity>
+                  <Text style={styles.inputLabel}>Registered Email</Text>
 
-                <TouchableOpacity
-                  style={styles.resendButton}
-                  onPress={resendOTP}
-                >
-                  <Text style={styles.resendText}>
-                    Didn't receive the code? Resend OTP
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your email address"
+                    placeholderTextColor="#8AA0A7"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+
+                  <TouchableOpacity
+                    style={styles.loginButton}
+                    onPress={sendOTP}
+                  >
+                    <Text style={styles.loginButtonText}>Send OTP</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.backButton} onPress={goBack}>
+                    <Text style={styles.backText}>← Back to Sign In</Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.securityBox}>
+                    <Text style={styles.securityTitle}>
+                      🔒 Secure Password Recovery
+                    </Text>
+
+                    <Text style={styles.securityText}>
+                      Verification is required before changing your password.
+                    </Text>
+                  </View>
+                </>
+              )}
+
+              {/* =================================================
+                  OTP
+              ================================================= */}
+
+              {loginStep === "otp" && (
+                <>
+                  <View style={styles.stepIcon}>
+                    <Text style={styles.stepIconText}>✉</Text>
+                  </View>
+
+                  <Text style={styles.loginTitle}>Verify Your Email</Text>
+
+                  <Text style={styles.loginSubtitle}>
+                    Enter the 6-digit verification code sent to your registered
+                    email.
                   </Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                  <Text style={styles.backText}>← Back</Text>
-                </TouchableOpacity>
-              </>
-            )}
+                  <View style={styles.otpContainer}>
+                    {otp.map((digit, index) => (
+                      <TextInput
+                        key={index}
+                        ref={(ref) => {
+                          otpRefs.current[index] = ref;
+                        }}
+                        style={[
+                          styles.otpInput,
+                          digit ? styles.otpFilled : null,
+                        ]}
+                        value={digit}
+                        onChangeText={(value) => handleOTPChange(value, index)}
+                        keyboardType="number-pad"
+                        maxLength={1}
+                        textAlign="center"
+                      />
+                    ))}
+                  </View>
 
-            {/* ================= RESET ================= */}
+                  <Text style={styles.timer}>
+                    {seconds > 0 ? (
+                      <>
+                        Code expires in{" "}
+                        <Text style={styles.timerBold}>
+                          {Math.floor(seconds / 60)}:
+                          {String(seconds % 60).padStart(2, "0")}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.timerExpired}>
+                        OTP expired. Please resend OTP.
+                      </Text>
+                    )}
+                  </Text>
 
-            {loginStep === "reset" && (
-              <>
-                {/* 3D PASSWORD ICON */}
+                  <TouchableOpacity
+                    style={styles.loginButton}
+                    onPress={verifyOTP}
+                  >
+                    <Text style={styles.loginButtonText}>Verify OTP</Text>
+                  </TouchableOpacity>
 
-                <View style={styles.passwordIconWrapper}>
-                  <View style={styles.passwordIconShadow} />
+                  <TouchableOpacity
+                    style={styles.resendButton}
+                    onPress={resendOTP}
+                  >
+                    <Text style={styles.resendText}>
+                      Didn't receive the code? Resend OTP
+                    </Text>
+                  </TouchableOpacity>
 
-                  <View style={styles.passwordIcon}>
-                    <View style={styles.lockShackle} />
+                  <TouchableOpacity style={styles.backButton} onPress={goBack}>
+                    <Text style={styles.backText}>← Back</Text>
+                  </TouchableOpacity>
+                </>
+              )}
 
-                    <View style={styles.lockBody}>
-                      <View style={styles.lockKeyhole} />
+              {/* =================================================
+                  RESET PASSWORD
+              ================================================= */}
+
+              {loginStep === "reset" && (
+                <>
+                  {/* 3D PASSWORD ICON */}
+
+                  <View style={styles.passwordIconWrapper}>
+                    <View style={styles.passwordIconShadow} />
+
+                    <View style={styles.passwordIcon}>
+                      <View style={styles.lockShackle} />
+
+                      <View style={styles.lockBody}>
+                        <View style={styles.lockKeyhole} />
+                      </View>
                     </View>
                   </View>
-                </View>
 
-                <Text style={styles.loginTitle}>Create New Password</Text>
+                  <Text style={styles.loginTitle}>Create New Password</Text>
 
-                <Text style={styles.loginSubtitle}>
-                  Create a strong password to keep your Medicine Shop account
-                  secure.
-                </Text>
-
-                {/* NEW PASSWORD */}
-
-                <Text style={styles.inputLabel}>New Password</Text>
-
-                <View style={styles.passwordInputWrapper}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Enter new password"
-                    placeholderTextColor="#8AA0A7"
-                    value={newPassword}
-                    onChangeText={setNewPassword}
-                    secureTextEntry={!showPassword}
-                  />
-                  <TouchableOpacity
-                    style={styles.eyeButton}
-                    onPress={() => setShowPassword(!showPassword)}
-                  >
-                    <Text style={styles.eyeText}>
-                      {showPassword ? "👁" : "👁"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* CONFIRM PASSWORD */}
-
-                <Text style={styles.inputLabel}>Confirm New Password</Text>
-
-                <View style={styles.passwordInputWrapper}>
-                  <TextInput
-                    style={styles.passwordInput}
-                    placeholder="Confirm new password"
-                    placeholderTextColor="#8AA0A7"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry={!showConfirmPassword}
-                  />
-
-                  <TouchableOpacity
-                    style={styles.eyeButton}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    <Text style={styles.eyeText}>👁</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {confirmPassword.length > 0 &&
-                  confirmPassword !== newPassword && (
-                    <Text style={styles.passwordMismatchText}>
-                      Passwords do not match
-                    </Text>
-                  )}
-
-                {newPassword.length > 0 &&
-                  !(
-                    newPassword.length >= 8 &&
-                    /[A-Z]/.test(newPassword) &&
-                    /[a-z]/.test(newPassword) &&
-                    /[0-9]/.test(newPassword)
-                  ) && (
-                    <View style={styles.passwordRequirements}>
-                      <View style={styles.requirementsHeader}>
-                        <View style={styles.requirementsDot} />
-
-                        <Text style={styles.requirementsTitle}>
-                          Password requirements
-                        </Text>
-                      </View>
-
-                      <Text style={styles.requirementText}>
-                        • At least 8 characters
-                      </Text>
-
-                      <Text style={styles.requirementText}>
-                        • One uppercase letter
-                      </Text>
-
-                      <Text style={styles.requirementText}>
-                        • One lowercase letter
-                      </Text>
-
-                      <Text style={styles.requirementText}>• One number</Text>
-                    </View>
-                  )}
-                {/* CREATE PASSWORD BUTTON */}
-
-                <TouchableOpacity
-                  style={styles.createPasswordButton}
-                  onPress={resetPassword}
-                >
-                  <View style={styles.button3DLayer} />
-
-                  <Text style={styles.createPasswordText}>
-                    Create New Password
+                  <Text style={styles.loginSubtitle}>
+                    Create a strong password to keep your Medicine Shop account
+                    secure.
                   </Text>
 
-                  <Text style={styles.buttonArrow}>→</Text>
-                </TouchableOpacity>
+                  {/* NEW PASSWORD */}
 
-                {/* BACK */}
+                  <Text style={styles.inputLabel}>New Password</Text>
 
-                <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                  <Text style={styles.backText}>← Back to Verification</Text>
-                </TouchableOpacity>
-              </>
-            )}
+                  <View style={styles.passwordInputWrapper}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Enter new password"
+                      placeholderTextColor="#8AA0A7"
+                      value={newPassword}
+                      onChangeText={setNewPassword}
+                      secureTextEntry={!showNewPassword}
+                    />
 
-            {/* ================= SUCCESS ================= */}
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      <Text style={styles.eyeText}>👁</Text>
+                    </TouchableOpacity>
+                  </View>
 
-            {loginStep === "success" && (
-              <>
-                <View style={styles.successCircle}>
-                  <Text style={styles.successCheck}>✓</Text>
-                </View>
+                  {/* PASSWORD REQUIREMENTS */}
 
-                <Text style={styles.loginTitle}>Password Changed</Text>
+                  {newPassword.length > 0 &&
+                    !(
+                      newPassword.length >= 8 &&
+                      /[A-Z]/.test(newPassword) &&
+                      /[a-z]/.test(newPassword) &&
+                      /[0-9]/.test(newPassword)
+                    ) && (
+                      <View style={styles.passwordRequirements}>
+                        <View style={styles.requirementsHeader}>
+                          <View style={styles.requirementsDot} />
 
-                <Text style={styles.loginSubtitle}>
-                  Your password has been successfully updated.
-                </Text>
+                          <Text style={styles.requirementsTitle}>
+                            Password requirements
+                          </Text>
+                        </View>
 
-                <Text style={styles.successDescription}>
-                  You can now sign in securely using your new password.
-                </Text>
+                        <Text style={styles.requirementText}>
+                          • At least 8 characters
+                        </Text>
 
-                <TouchableOpacity
-                  style={styles.loginButton}
-                  onPress={() => {
-                    setLoginStep("login");
-                    setNewPassword("");
-                    setConfirmPassword("");
-                    setOtp(["", "", "", "", "", ""]);
-                  }}
-                >
-                  <Text style={styles.loginButtonText}>Back to Login</Text>
-                </TouchableOpacity>
+                        <Text style={styles.requirementText}>
+                          • One uppercase letter
+                        </Text>
 
-                <Text style={styles.securityText}>
-                  🔒 Your account is now protected with your new password.
-                </Text>
-              </>
-            )}
+                        <Text style={styles.requirementText}>
+                          • One lowercase letter
+                        </Text>
+
+                        <Text style={styles.requirementText}>• One number</Text>
+                      </View>
+                    )}
+
+                  {/* CONFIRM PASSWORD */}
+
+                  <Text style={styles.inputLabel}>Confirm New Password</Text>
+
+                  <View style={styles.passwordInputWrapper}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Confirm new password"
+                      placeholderTextColor="#8AA0A7"
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      secureTextEntry={!showConfirmPassword}
+                    />
+
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                    >
+                      <Text style={styles.eyeText}>👁</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* PASSWORD MISMATCH MESSAGE */}
+
+                  {confirmPassword.length > 0 &&
+                    confirmPassword !== newPassword && (
+                      <Text style={styles.passwordMismatchText}>
+                        Passwords do not match
+                      </Text>
+                    )}
+
+                  {/* CREATE PASSWORD BUTTON */}
+
+                  <TouchableOpacity
+                    style={styles.createPasswordButton}
+                    onPress={resetPassword}
+                  >
+                    <View style={styles.button3DLayer} />
+
+                    <Text style={styles.createPasswordText}>
+                      Create New Password
+                    </Text>
+
+                    <Text style={styles.buttonArrow}>→</Text>
+                  </TouchableOpacity>
+
+                  {/* BACK */}
+
+                  <TouchableOpacity style={styles.backButton} onPress={goBack}>
+                    <Text style={styles.backText}>← Back to Verification</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {/* =================================================
+                  SUCCESS
+              ================================================= */}
+
+              {loginStep === "success" && (
+                <>
+                  <View style={styles.successCircle}>
+                    <Text style={styles.successCheck}>✓</Text>
+                  </View>
+
+                  <Text style={styles.loginTitle}>Password Changed</Text>
+
+                  <Text style={styles.loginSubtitle}>
+                    Your password has been successfully updated.
+                  </Text>
+
+                  <Text style={styles.successDescription}>
+                    You can now sign in securely using your new password.
+                  </Text>
+
+                  <TouchableOpacity
+                    style={styles.loginButton}
+                    onPress={() => {
+                      setLoginStep("login");
+                      setNewPassword("");
+                      setConfirmPassword("");
+                      setOtp(["", "", "", "", "", ""]);
+                    }}
+                  >
+                    <Text style={styles.loginButtonText}>Back to Login</Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.securityText}>
+                    🔒 Your account is now protected with your new password.
+                  </Text>
+                </>
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -724,13 +843,23 @@ export default function HomeScreen() {
   );
 }
 
+/* =========================================================
+   STYLES
+========================================================= */
+
 const styles = StyleSheet.create({
+  /* =======================================================
+     MAIN CONTAINER
+  ======================================================= */
+
   container: {
     flex: 1,
     backgroundColor: "#F5F9FA",
   },
 
-  /* HEADER */
+  /* =======================================================
+     HEADER
+  ======================================================= */
 
   header: {
     height: 82,
@@ -739,6 +868,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+
+  headerScrolled: {
+    height: 70,
+    paddingHorizontal: 30,
+    elevation: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
   },
 
   brandContainer: {
@@ -798,7 +940,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* HERO */
+  /* =======================================================
+     HERO
+  ======================================================= */
 
   hero: {
     backgroundColor: "#083C4A",
@@ -852,7 +996,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* MEDICINE */
+  /* =======================================================
+     MEDICINE ILLUSTRATION
+  ======================================================= */
 
   medicineIllustration: {
     width: 280,
@@ -954,7 +1100,9 @@ const styles = StyleSheet.create({
     left: 6,
   },
 
-  /* SERVICES */
+  /* =======================================================
+     SERVICES
+  ======================================================= */
 
   section: {
     paddingHorizontal: 35,
@@ -1020,7 +1168,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  /* CTA */
+  /* =======================================================
+     CTA
+  ======================================================= */
 
   cta: {
     backgroundColor: "#EAF6F8",
@@ -1058,7 +1208,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* FOOTER */
+  /* =======================================================
+     FOOTER
+  ======================================================= */
 
   footer: {
     backgroundColor: "#083C4A",
@@ -1085,7 +1237,9 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
 
-  /* MODAL */
+  /* =======================================================
+     MODAL
+  ======================================================= */
 
   modalOverlay: {
     flex: 1,
@@ -1137,6 +1291,10 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
 
+  /* =======================================================
+     LOGIN LOGO
+  ======================================================= */
+
   loginLogo: {
     width: 55,
     height: 55,
@@ -1180,6 +1338,10 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
 
+  /* =======================================================
+     INPUT
+  ======================================================= */
+
   inputLabel: {
     color: "#153B47",
     fontSize: 13,
@@ -1199,6 +1361,55 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
+  /* =======================================================
+     PASSWORD INPUT
+  ======================================================= */
+
+  passwordInputWrapper: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#D7E5E8",
+    borderRadius: 10,
+    backgroundColor: "#FAFCFC",
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingLeft: 15,
+    paddingRight: 12,
+  },
+
+  passwordInput: {
+    flex: 1,
+    height: "100%",
+    color: "#153B47",
+    fontSize: 14,
+  },
+
+  eyeButton: {
+    width: 45,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  eyeText: {
+    fontSize: 20,
+    color: "#0D5367",
+  },
+
+  passwordMismatchText: {
+    color: "#D64545",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: -9,
+    marginLeft: 2,
+    marginBottom: 12,
+  },
+
+  /* =======================================================
+     FORGOT PASSWORD
+  ======================================================= */
+
   forgotButton: {
     alignSelf: "flex-end",
     marginTop: -3,
@@ -1210,6 +1421,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
+
+  /* =======================================================
+     LOGIN BUTTON
+  ======================================================= */
 
   loginButton: {
     height: 52,
@@ -1226,6 +1441,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
+  /* =======================================================
+     SECURITY
+  ======================================================= */
+
   securityText: {
     color: "#8AA0A7",
     fontSize: 11,
@@ -1234,7 +1453,22 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
 
-  /* STEP ICON */
+  securityBox: {
+    backgroundColor: "#F5F9FA",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 20,
+  },
+
+  securityTitle: {
+    color: "#153B47",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
+  /* =======================================================
+     STEP ICON
+  ======================================================= */
 
   stepIcon: {
     width: 58,
@@ -1251,7 +1485,9 @@ const styles = StyleSheet.create({
     fontSize: 27,
   },
 
-  /* BACK */
+  /* =======================================================
+     BACK
+  ======================================================= */
 
   backButton: {
     alignItems: "center",
@@ -1264,22 +1500,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* SECURITY */
-
-  securityBox: {
-    backgroundColor: "#F5F9FA",
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 20,
-  },
-
-  securityTitle: {
-    color: "#153B47",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-
-  /* OTP */
+  /* =======================================================
+     OTP
+  ======================================================= */
 
   otpContainer: {
     flexDirection: "row",
@@ -1316,6 +1539,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
+  timerExpired: {
+    color: "#D64545",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
   resendButton: {
     alignItems: "center",
     marginTop: 16,
@@ -1327,7 +1556,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* SUCCESS */
+  /* =======================================================
+     SUCCESS
+  ======================================================= */
 
   successCircle: {
     width: 75,
@@ -1353,9 +1584,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 10,
   },
-  /* ============================= */
-  /* 3D PASSWORD ICON */
-  /* ============================= */
+
+  /* =======================================================
+     3D PASSWORD ICON
+  ======================================================= */
 
   passwordIconWrapper: {
     width: 82,
@@ -1427,51 +1659,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#0D5367",
   },
 
-  /* ============================= */
-  /* PASSWORD INPUT */
-  /* ============================= */
-
-  passwordInputWrapper: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#D7E5E8",
-    borderRadius: 10,
-    backgroundColor: "#FAFCFC",
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    paddingLeft: 15,
-    paddingRight: 12,
-  },
-
-  passwordInput: {
-    flex: 1,
-    height: "100%",
-    color: "#153B47",
-    fontSize: 14,
-  },
-
-  passwordMismatchText: {
-    color: "#D64545",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-
-  /* ============================= */
-  /* PASSWORD STRENGTH */
-  /* ============================= */
-
-  strengthHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: -7,
-    marginBottom: 7,
-  },
-
-  /* ============================= */
-  /* PASSWORD REQUIREMENTS */
-  /* ============================= */
+  /* =======================================================
+     PASSWORD REQUIREMENTS
+  ======================================================= */
 
   passwordRequirements: {
     backgroundColor: "#F5F9FA",
@@ -1517,14 +1707,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  requirementTextActive: {
-    color: "#0A829A",
-    fontWeight: "700",
-  },
-
-  /* ============================= */
-  /* CREATE PASSWORD BUTTON */
-  /* ============================= */
+  /* =======================================================
+     CREATE PASSWORD BUTTON
+  ======================================================= */
 
   createPasswordButton: {
     height: 53,
@@ -1565,17 +1750,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     marginLeft: 10,
-  },
-
-  eyeButton: {
-    width: 45,
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  eyeText: {
-    fontSize: 20,
-    color: "#0D5367",
   },
 });
