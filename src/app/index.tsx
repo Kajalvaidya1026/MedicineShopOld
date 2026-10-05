@@ -1,25 +1,209 @@
-import { useEffect, useRef, useState } from "react";
-import AnimatedCard from "../components/AnimatedCard";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  Easing,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  useWindowDimensions,
 } from "react-native";
+import { Stack } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
-type LoginStep = "login" | "forgot" | "otp" | "reset" | "success";
+/* ============================================================
+   LOGIN TYPES
+============================================================ */
+
+type LoginStep =
+  | "login"
+  | "forgot"
+  | "otp"
+  | "reset"
+  | "success";
+
+/* ============================================================
+   HERO IMAGES
+============================================================ */
+
+const heroImages = [
+  require("../../assets/images/pharmacy-3.png"),
+  require("../../assets/images/pharmacy-1.png"),
+];
+
+/* ============================================================
+   BOTTOM STATS DATA
+============================================================ */
+
+const STATS_DATA = [
+  {
+    number: "01",
+    title: "Medicines",
+    subtitle: "Verified Database",
+    badge: "50,000+",
+  },
+  {
+    number: "02",
+    title: "Inventory",
+    subtitle: "Real-Time Stock",
+    badge: "Auto-Track",
+  },
+  {
+    number: "03",
+    title: "Orders",
+    subtitle: "Fast Processing",
+    badge: "Instant POS",
+  },
+  {
+    number: "04",
+    title: "Reports",
+    subtitle: "Smart Analytics",
+    badge: "AI Powered",
+  },
+];
+
+/* ============================================================
+   HOME SCREEN COMPONENT
+============================================================ */
 
 export default function HomeScreen() {
-  const [showLogin, setShowLogin] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const heroAnimation = useRef(new Animated.Value(0)).current;
-  const medicineAnimation = useRef(new Animated.Value(0)).current;
+  const { width, height } = useWindowDimensions();
+  const isMobile = width < 768;
+  const isSmallMobile = width < 420;
 
+  /* ==========================================================
+     HERO IMAGE CAROUSEL ANIMATION
+  ========================================================== */
+
+  const [heroImageIndex, setHeroImageIndex] = useState(0);
+
+  const [imageOpacity] = useState(() => new Animated.Value(1));
+  const [imageTranslate] = useState(() => new Animated.Value(0));
+
+  const switchImage = useCallback(
+    (targetIndex: number) => {
+      if (targetIndex === heroImageIndex) return;
+
+      Animated.parallel([
+        Animated.timing(imageOpacity, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(imageTranslate, {
+          toValue: 15,
+          duration: 400,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setHeroImageIndex(targetIndex);
+        imageTranslate.setValue(-15);
+
+        Animated.parallel([
+          Animated.timing(imageOpacity, {
+            toValue: 1,
+            duration: 500,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(imageTranslate, {
+            toValue: 0,
+            duration: 500,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    },
+    [heroImageIndex, imageOpacity, imageTranslate]
+  );
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const nextIndex =
+        heroImageIndex === heroImages.length - 1 ? 0 : heroImageIndex + 1;
+      switchImage(nextIndex);
+    }, 6000);
+
+    return () => clearInterval(timer);
+  }, [heroImageIndex, switchImage]);
+
+  /* ==========================================================
+     ENTRANCE & FLOATING ANIMATIONS
+  ========================================================== */
+
+  const [heroFadeAnim] = useState(() => new Animated.Value(0));
+  const [heroSlideAnim] = useState(() => new Animated.Value(24));
+  const [statsFadeAnim] = useState(() => new Animated.Value(0));
+  const [statsSlideAnim] = useState(() => new Animated.Value(20));
+  const [floatAnim] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    Animated.stagger(180, [
+      Animated.parallel([
+        Animated.timing(heroFadeAnim, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(heroSlideAnim, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(statsFadeAnim, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(statsSlideAnim, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    const floatLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -6,
+          duration: 2500,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2500,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    floatLoop.start();
+
+    return () => floatLoop.stop();
+  }, [heroFadeAnim, heroSlideAnim, statsFadeAnim, statsSlideAnim, floatAnim]);
+
+  /* ==========================================================
+     LOGIN STATES
+  ========================================================== */
+
+  const [showLogin, setShowLogin] = useState(false);
   const [loginStep, setLoginStep] = useState<LoginStep>("login");
 
   const [email, setEmail] = useState("");
@@ -31,15 +215,14 @@ export default function HomeScreen() {
 
   const [newPassword, setNewPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
-
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [seconds, setSeconds] = useState(300);
 
-  /* =====================================================
+  /* ==========================================================
      OTP TIMER
-  ===================================================== */
+  ========================================================== */
 
   useEffect(() => {
     if (loginStep !== "otp" || seconds <= 0) {
@@ -47,132 +230,144 @@ export default function HomeScreen() {
     }
 
     const timer = setInterval(() => {
-      setSeconds((prev) => prev - 1);
+      setSeconds((previous) => previous - 1);
     }, 1000);
 
     return () => clearInterval(timer);
   }, [loginStep, seconds]);
 
-  /* =====================================================
-     OPEN LOGIN
-  ===================================================== */
+  /* ==========================================================
+     OPEN / CLOSE LOGIN
+  ========================================================== */
 
   const openLogin = () => {
     setLoginStep("login");
     setShowLogin(true);
   };
 
-  /* =====================================================
-     CLOSE LOGIN
-  ===================================================== */
-
   const closeLogin = () => {
     setShowLogin(false);
-
-    setTimeout(() => {
-      setLoginStep("login");
-    }, 200);
+    setLoginStep("login");
+    setEmail("");
+    setPassword("");
+    setOtp(["", "", "", "", "", ""]);
+    setNewPassword("");
+    setConfirmPassword("");
+    setSeconds(300);
   };
 
-  /* =====================================================
-     LOGIN
-  ===================================================== */
+  /* ==========================================================
+     EMAIL VALIDATION
+  ========================================================== */
+
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  /* ==========================================================
+     LOGIN HANDLER
+  ========================================================== */
 
   const handleLogin = () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Login Required", "Please enter your email and password.");
+    if (!email.trim()) {
+      Alert.alert("Email Required", "Please enter your email.");
       return;
     }
 
-    Alert.alert(
-      "Login Successful",
-      "Authentication will connect to your backend later.",
-    );
-  };
-
-  /* =====================================================
-     FORGOT PASSWORD
-  ===================================================== */
-
-  const openForgotPassword = () => {
-    setLoginStep("forgot");
-  };
-
-  const sendOTP = () => {
-    const trimmedEmail = email.trim();
-
-    if (!trimmedEmail) {
-      Alert.alert("Email Required", "Please enter your registered email.");
-      return;
-    }
-
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailPattern.test(trimmedEmail)) {
+    if (!emailPattern.test(email.trim())) {
       Alert.alert("Invalid Email", "Please enter a valid email address.");
       return;
     }
 
-    setEmail(trimmedEmail);
-    setOtp(["", "", "", "", "", ""]);
-    setSeconds(300);
-    setLoginStep("otp");
-  };
-
-  /* =====================================================
-     OTP
-  ===================================================== */
-
-  const handleOTPChange = (value: string, index: number) => {
-    const number = value.replace(/[^0-9]/g, "");
-
-    if (!number) {
-      const updatedOTP = [...otp];
-      updatedOTP[index] = "";
-      setOtp(updatedOTP);
+    if (!password.trim()) {
+      Alert.alert("Password Required", "Please enter your password.");
       return;
     }
 
-    const updatedOTP = [...otp];
-
-    updatedOTP[index] = number.slice(-1);
-
-    setOtp(updatedOTP);
-
-    if (index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const verifyOTP = () => {
-    if (seconds <= 0) {
+    if (password.length < 8) {
       Alert.alert(
-        "OTP Expired",
-        "Your OTP has expired. Please request a new OTP.",
+        "Invalid Password",
+        "Password must contain at least 8 characters."
       );
       return;
     }
 
-    const code = otp.join("");
+    Alert.alert(
+      "Login",
+      "Backend authentication will be connected here."
+    );
+  };
 
-    if (code.length !== 6) {
-      Alert.alert("Incomplete OTP", "Please enter the complete 6-digit OTP.");
+  /* ==========================================================
+     FORGOT PASSWORD HANDLER
+  ========================================================== */
+
+  const handleForgotPassword = () => {
+    if (!email.trim()) {
+      Alert.alert("Email Required", "Please enter your registered email.");
+      return;
+    }
+
+    if (!emailPattern.test(email.trim())) {
+      Alert.alert("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+
+    setSeconds(300);
+    setOtp(["", "", "", "", "", ""]);
+    setLoginStep("otp");
+  };
+
+  /* ==========================================================
+     OTP INPUT HANDLERS
+  ========================================================== */
+
+  const handleOtpChange = (value: string, index: number) => {
+    const onlyNumber = value.replace(/[^0-9]/g, "");
+    const updatedOtp = [...otp];
+    updatedOtp[index] = onlyNumber.slice(-1);
+    setOtp(updatedOtp);
+
+    if (onlyNumber && index < otp.length - 1) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyPress = (event: any, index: number) => {
+    if (event.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const verifyOtp = () => {
+    const enteredOtp = otp.join("");
+
+    if (enteredOtp.length !== 6) {
+      Alert.alert("Invalid OTP", "Please enter the complete 6-digit OTP.");
       return;
     }
 
     setLoginStep("reset");
   };
 
-  const resendOTP = () => {
+  const resendOtp = () => {
     setOtp(["", "", "", "", "", ""]);
     setSeconds(300);
-
-    Alert.alert("OTP Sent", "A new OTP has been generated.");
+    Alert.alert("OTP Sent", "A new OTP has been sent to your email.");
   };
 
-  /* =====================================================
-     PASSWORD RESET
-  ===================================================== */
+  /* ==========================================================
+     PASSWORD VALIDATION
+  ========================================================== */
+
+  const hasEightCharacters = newPassword.length >= 8;
+  const hasUppercase = /[A-Z]/.test(newPassword);
+  const hasLowercase = /[a-z]/.test(newPassword);
+  const hasNumber = /[0-9]/.test(newPassword);
+
+  const passwordValid =
+    hasEightCharacters &&
+    hasUppercase &&
+    hasLowercase &&
+    hasNumber;
 
   const resetPassword = () => {
     if (!newPassword) {
@@ -180,1070 +375,1469 @@ export default function HomeScreen() {
       return;
     }
 
+    if (!passwordValid) {
+      Alert.alert("Invalid Password", "Please meet all password requirements.");
+      return;
+    }
+
     if (!confirmPassword) {
-      Alert.alert("Confirm Password", "Please confirm your new password.");
+      Alert.alert("Confirm Password", "Please confirm your password.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert(
-        "Passwords Do Not Match",
-        "New Password and Confirm New Password must be the same.",
-      );
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      Alert.alert(
-        "Invalid Password",
-        "Password must contain at least 8 characters.",
-      );
-      return;
-    }
-
-    if (!/[A-Z]/.test(newPassword)) {
-      Alert.alert(
-        "Invalid Password",
-        "Password must contain at least one uppercase letter.",
-      );
-      return;
-    }
-
-    if (!/[a-z]/.test(newPassword)) {
-      Alert.alert(
-        "Invalid Password",
-        "Password must contain at least one lowercase letter.",
-      );
-      return;
-    }
-
-    if (!/[0-9]/.test(newPassword)) {
-      Alert.alert(
-        "Invalid Password",
-        "Password must contain at least one number.",
-      );
+      Alert.alert("Password Mismatch", "New password and confirm password must match.");
       return;
     }
 
     setLoginStep("success");
   };
 
-  /* =====================================================
-     BACK BUTTON
-  ===================================================== */
+  /* ==========================================================
+     TIME FORMAT
+  ========================================================== */
 
-  const goBack = () => {
-    if (loginStep === "forgot") {
-      setLoginStep("login");
-    } else if (loginStep === "otp") {
-      setLoginStep("forgot");
-    } else if (loginStep === "reset") {
-      setLoginStep("otp");
-    } else if (loginStep === "success") {
-      setLoginStep("login");
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  const formattedTime = `${minutes}:${remainingSeconds
+    .toString()
+    .padStart(2, "0")}`;
+
+  /* ==========================================================
+     PASSWORD REQUIREMENTS HELPER
+  ========================================================== */
+
+  const renderPasswordRequirements = () => {
+    if (!newPassword) {
+      return null;
     }
+
+    return (
+      <View style={styles.requirementsBox}>
+        <Text style={styles.requirementsTitle}>Password must contain:</Text>
+
+        <View style={styles.requirementRow}>
+          <Text style={[styles.requirementIcon, hasEightCharacters && styles.requirementPassed]}>
+            {hasEightCharacters ? "✓" : "•"}
+          </Text>
+          <Text style={[styles.requirementText, hasEightCharacters && styles.requirementPassedText]}>
+            At least 8 characters
+          </Text>
+        </View>
+
+        <View style={styles.requirementRow}>
+          <Text style={[styles.requirementIcon, hasUppercase && styles.requirementPassed]}>
+            {hasUppercase ? "✓" : "•"}
+          </Text>
+          <Text style={[styles.requirementText, hasUppercase && styles.requirementPassedText]}>
+            One uppercase letter (A-Z)
+          </Text>
+        </View>
+
+        <View style={styles.requirementRow}>
+          <Text style={[styles.requirementIcon, hasLowercase && styles.requirementPassed]}>
+            {hasLowercase ? "✓" : "•"}
+          </Text>
+          <Text style={[styles.requirementText, hasLowercase && styles.requirementPassedText]}>
+            One lowercase letter (a-z)
+          </Text>
+        </View>
+
+        <View style={styles.requirementRow}>
+          <Text style={[styles.requirementIcon, hasNumber && styles.requirementPassed]}>
+            {hasNumber ? "✓" : "•"}
+          </Text>
+          <Text style={[styles.requirementText, hasNumber && styles.requirementPassedText]}>
+            One number (0-9)
+          </Text>
+        </View>
+      </View>
+    );
   };
 
-  /* =====================================================
-     RESET AUTH FORM
-  ===================================================== */
+  /* ==========================================================
+     LOGIN MODAL RENDER HELPER
+  ========================================================== */
 
-  const resetAuthForm = () => {
-    setEmail("");
-    setPassword("");
-    setOtp(["", "", "", "", "", ""]);
-    setNewPassword("");
-    setConfirmPassword("");
-
-    setShowPassword(false);
-    setShowNewPassword(false);
-    setShowConfirmPassword(false);
-
-    setSeconds(300);
-  };
-
-  /* =====================================================
-     UI
-  ===================================================== */
-
-  return (
-    <View style={styles.container}>
-      {/* =================================================
-          MAIN PAGE
-      ================================================= */}
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        onScroll={(event) => {
-          setScrollY(event.nativeEvent.contentOffset.y);
-        }}
-        scrollEventThrottle={16}
-      >
-        {/* =================================================
-            HEADER
-        ================================================= */}
-
-        <View style={[styles.header, scrollY > 50 && styles.headerScrolled]}>
-          <View style={styles.brandContainer}>
-            <View style={styles.logoBox}>
-              <View style={styles.crossVertical} />
-              <View style={styles.crossHorizontal} />
-            </View>
-
-            <View>
-              <Text style={styles.logoText}>MEDICARE</Text>
-
-              <Text style={styles.logoSubText}>Medicine Shop Management</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={styles.headerLoginButton}
-            onPress={openLogin}
-          >
-            <Text style={styles.headerLoginText}>Login</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* =================================================
-            HERO
-        ================================================= */}
-
-        <View style={styles.hero}>
-          <View style={styles.heroContent}>
-            <Text style={styles.heroSmallText}>
-              MEDICINE SHOP MANAGEMENT SYSTEM
-            </Text>
-
-            <Text style={styles.heroTitle}>
-              Manage Your Medicine Shop With Ease
-            </Text>
-
-            <Text style={styles.heroDescription}>
-              Manage medicines, stock, customers, suppliers, orders and billing
-              from one secure system.
-            </Text>
-
-            <TouchableOpacity style={styles.primaryButton} onPress={openLogin}>
-              <Text style={styles.primaryButtonText}>Get Started</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* MEDICINE ILLUSTRATION */}
-
-          <View style={styles.medicineIllustration}>
-            <View style={styles.bottleShadow} />
-
-            <View style={styles.bottle}>
-              <View style={styles.bottleCap} />
-
-              <View style={styles.bottleLabel}>
-                <Text style={styles.bottleTitle}>MED</Text>
-
-                <Text style={styles.bottleText}>CARE</Text>
-              </View>
-            </View>
-
-            <View style={styles.capsule}>
-              <View style={styles.capsuleTop} />
-              <View style={styles.capsuleBottom} />
-            </View>
-
-            <View style={styles.tablet}>
-              <View style={styles.tabletLine} />
-            </View>
-          </View>
-        </View>
-
-        {/* =================================================
-            SERVICES
-        ================================================= */}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionSmallTitle}>OUR SYSTEM</Text>
-
-          <Text style={styles.sectionTitle}>
-            Everything You Need in One Place
-          </Text>
-
-          <Text style={styles.sectionDescription}>
-            A centralized system to manage the complete medicine shop workflow.
-          </Text>
-
-          <View style={styles.serviceGrid}>
-            <View style={styles.serviceCard}>
-              <Text style={styles.serviceTitle}>Medicine Management</Text>
-
-              <Text style={styles.serviceText}>
-                Manage medicines, categories, batches and expiry dates.
-              </Text>
-            </View>
-
-            <View style={styles.serviceCard}>
-              <Text style={styles.serviceTitle}>Stock Management</Text>
-
-              <Text style={styles.serviceText}>
-                Monitor stock levels and identify low-stock medicines.
-              </Text>
-            </View>
-
-            <View style={styles.serviceCard}>
-              <Text style={styles.serviceTitle}>Orders & Billing</Text>
-
-              <Text style={styles.serviceText}>
-                Manage purchase orders, invoices, payments and returns.
-              </Text>
-            </View>
-
-            <View style={styles.serviceCard}>
-              <Text style={styles.serviceTitle}>Reports</Text>
-
-              <Text style={styles.serviceText}>
-                View sales, purchases, stock and business reports.
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* =================================================
-            CTA
-        ================================================= */}
-
-        <View style={styles.cta}>
-          <Text style={styles.ctaTitle}>Ready to Get Started?</Text>
-
-          <Text style={styles.ctaText}>
-            Login to access your Medicine Shop Management System.
-          </Text>
-
-          <TouchableOpacity style={styles.ctaButton} onPress={openLogin}>
-            <Text style={styles.ctaButtonText}>Login to System</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* =================================================
-            FOOTER
-        ================================================= */}
-
-        <View style={styles.footer}>
-          <Text style={styles.footerBrand}>MEDICARE</Text>
-
-          <Text style={styles.footerText}>Secure • Simple • Reliable</Text>
-
-          <Text style={styles.copyright}>
-            © 2026 MEDICARE. All rights reserved.
-          </Text>
-        </View>
-      </ScrollView>
-
-      {/* =================================================
-          LOGIN / PASSWORD RECOVERY MODAL
-      ================================================= */}
-
+  const renderLoginModal = () => {
+    return (
       <Modal
         visible={showLogin}
         transparent
         animationType="fade"
         onRequestClose={closeLogin}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.loginCard}>
-            {/* CLOSE BUTTON */}
-
-            <TouchableOpacity style={styles.closeButton} onPress={closeLogin}>
-              <Text style={styles.closeText}>×</Text>
-            </TouchableOpacity>
-
-            {/* LOGIN CONTENT SCROLL */}
-
+        <View style={styles.modalBackground}>
+          <View style={[styles.loginCard, isMobile && styles.loginCardMobile]}>
             <ScrollView
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.loginScrollContent}
               keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.modalScrollContent}
             >
-              {/* =================================================
-                  LOGIN
-              ================================================= */}
+              {/* CLOSE BUTTON */}
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={closeLogin}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
 
+              {/* =================================================
+                  STEP: LOGIN
+              ================================================= */}
               {loginStep === "login" && (
-                <>
-                  <View style={styles.loginLogo}>
-                    <View style={styles.loginCrossVertical} />
-                    <View style={styles.loginCrossHorizontal} />
+                <View>
+                  <View style={styles.modalLogo}>
+                    <View style={styles.modalCrossVertical} />
+                    <View style={styles.modalCrossHorizontal} />
                   </View>
 
-                  <Text style={styles.loginTitle}>Welcome Back</Text>
-
-                  <Text style={styles.loginSubtitle}>
-                    Login to your Medicine Shop account
+                  <Text style={styles.modalTitle}>Welcome Back</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Sign in to continue to MEDICARE
                   </Text>
 
+                  {/* EMAIL */}
                   <Text style={styles.inputLabel}>Email Address</Text>
-
                   <TextInput
-                    style={styles.input}
-                    placeholder="Enter your email"
-                    placeholderTextColor="#8AA0A7"
                     value={email}
                     onChangeText={setEmail}
+                    placeholder="Enter your email"
+                    placeholderTextColor="#9AAEB4"
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    autoCorrect={false}
+                    style={styles.input}
                   />
 
+                  {/* PASSWORD */}
                   <Text style={styles.inputLabel}>Password</Text>
-
-                  <View style={styles.passwordInputWrapper}>
+                  <View style={styles.passwordContainer}>
                     <TextInput
-                      style={styles.passwordInput}
-                      placeholder="Enter your password"
-                      placeholderTextColor="#8AA0A7"
                       value={password}
                       onChangeText={setPassword}
+                      placeholder="Enter your password"
+                      placeholderTextColor="#9AAEB4"
                       secureTextEntry={!showPassword}
+                      style={styles.passwordInput}
                     />
-
                     <TouchableOpacity
-                      style={styles.eyeButton}
                       onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeButton}
+                      activeOpacity={0.7}
                     >
-                      <Text style={styles.eyeText}>👁</Text>
+                      <Text style={styles.eyeText}>
+                        {showPassword ? "Hide" : "Show"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
+                  {/* FORGOT PASSWORD LINK */}
                   <TouchableOpacity
                     style={styles.forgotButton}
-                    onPress={openForgotPassword}
+                    onPress={() => setLoginStep("forgot")}
+                    activeOpacity={0.7}
                   >
                     <Text style={styles.forgotText}>Forgot Password?</Text>
                   </TouchableOpacity>
 
+                  {/* SUBMIT BUTTON */}
                   <TouchableOpacity
-                    style={styles.loginButton}
+                    style={styles.modalPrimaryButton}
                     onPress={handleLogin}
+                    activeOpacity={0.85}
                   >
-                    <Text style={styles.loginButtonText}>Login</Text>
+                    <Text style={styles.modalPrimaryButtonText}>Sign In</Text>
                   </TouchableOpacity>
 
                   <Text style={styles.securityText}>
-                    🔒 Your login information is securely protected.
+                    🔒 Secure access • Role-based authentication
                   </Text>
-                </>
+                </View>
               )}
 
               {/* =================================================
-                  FORGOT PASSWORD
+                  STEP: FORGOT PASSWORD
               ================================================= */}
-
               {loginStep === "forgot" && (
-                <>
-                  <View style={styles.stepIcon}>
-                    <Text style={styles.stepIconText}>🔐</Text>
+                <View>
+                  <View style={styles.stepCircle}>
+                    <Text style={styles.stepCircleText}>1</Text>
                   </View>
 
-                  <Text style={styles.loginTitle}>Forgot Password?</Text>
-
-                  <Text style={styles.loginSubtitle}>
-                    Enter your registered email and we'll help you securely
-                    reset your password.
+                  <Text style={styles.modalTitle}>Forgot Password?</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Enter your registered email and we will send a 6-digit OTP.
                   </Text>
 
-                  <Text style={styles.inputLabel}>Registered Email</Text>
-
+                  <Text style={styles.inputLabel}>Email Address</Text>
                   <TextInput
-                    style={styles.input}
-                    placeholder="Enter your email address"
-                    placeholderTextColor="#8AA0A7"
                     value={email}
                     onChangeText={setEmail}
+                    placeholder="Enter your email"
+                    placeholderTextColor="#9AAEB4"
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    autoCorrect={false}
+                    style={styles.input}
                   />
 
                   <TouchableOpacity
-                    style={styles.loginButton}
-                    onPress={sendOTP}
+                    style={styles.modalPrimaryButton}
+                    onPress={handleForgotPassword}
+                    activeOpacity={0.85}
                   >
-                    <Text style={styles.loginButtonText}>Send OTP</Text>
+                    <Text style={styles.modalPrimaryButtonText}>Send OTP</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                    <Text style={styles.backText}>← Back to Sign In</Text>
+                  <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => setLoginStep("login")}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.backButtonText}>← Back to Login</Text>
                   </TouchableOpacity>
-
-                  <View style={styles.securityBox}>
-                    <Text style={styles.securityTitle}>
-                      🔒 Secure Password Recovery
-                    </Text>
-
-                    <Text style={styles.securityText}>
-                      Verification is required before changing your password.
-                    </Text>
-                  </View>
-                </>
+                </View>
               )}
 
               {/* =================================================
-                  OTP
+                  STEP: OTP
               ================================================= */}
-
               {loginStep === "otp" && (
-                <>
-                  <View style={styles.stepIcon}>
-                    <Text style={styles.stepIconText}>✉</Text>
+                <View>
+                  <View style={styles.stepCircle}>
+                    <Text style={styles.stepCircleText}>2</Text>
                   </View>
 
-                  <Text style={styles.loginTitle}>Verify Your Email</Text>
-
-                  <Text style={styles.loginSubtitle}>
-                    Enter the 6-digit verification code sent to your registered
-                    email.
+                  <Text style={styles.modalTitle}>Verify OTP</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Enter the 6-digit code sent to
                   </Text>
+                  <Text style={styles.otpEmail}>{email}</Text>
 
+                  {/* OTP BOXES */}
                   <View style={styles.otpContainer}>
-                    {otp.map((digit, index) => (
+                    {otp.map((value, index) => (
                       <TextInput
                         key={index}
                         ref={(ref) => {
                           otpRefs.current[index] = ref;
                         }}
-                        style={[
-                          styles.otpInput,
-                          digit ? styles.otpFilled : null,
-                        ]}
-                        value={digit}
-                        onChangeText={(value) => handleOTPChange(value, index)}
+                        value={value}
+                        onChangeText={(text) => handleOtpChange(text, index)}
+                        onKeyPress={(event) => handleOtpKeyPress(event, index)}
                         keyboardType="number-pad"
                         maxLength={1}
-                        textAlign="center"
+                        style={[
+                          styles.otpInput,
+                          value ? styles.otpInputActive : null,
+                        ]}
                       />
                     ))}
                   </View>
 
-                  <Text style={styles.timer}>
-                    {seconds > 0 ? (
-                      <>
-                        Code expires in{" "}
-                        <Text style={styles.timerBold}>
-                          {Math.floor(seconds / 60)}:
-                          {String(seconds % 60).padStart(2, "0")}
-                        </Text>
-                      </>
-                    ) : (
-                      <Text style={styles.timerExpired}>
-                        OTP expired. Please resend OTP.
-                      </Text>
-                    )}
+                  {/* TIMER */}
+                  <Text style={styles.timerText}>
+                    {seconds > 0
+                      ? `OTP expires in ${formattedTime}`
+                      : "OTP expired"}
                   </Text>
 
+                  {/* VERIFY BUTTON */}
                   <TouchableOpacity
-                    style={styles.loginButton}
-                    onPress={verifyOTP}
+                    style={[
+                      styles.modalPrimaryButton,
+                      seconds <= 0 && styles.disabledButton,
+                    ]}
+                    onPress={verifyOtp}
+                    disabled={seconds <= 0}
+                    activeOpacity={0.85}
                   >
-                    <Text style={styles.loginButtonText}>Verify OTP</Text>
+                    <Text style={styles.modalPrimaryButtonText}>Verify OTP</Text>
                   </TouchableOpacity>
 
+                  {/* RESEND */}
                   <TouchableOpacity
+                    onPress={resendOtp}
+                    disabled={seconds > 0}
                     style={styles.resendButton}
-                    onPress={resendOTP}
+                    activeOpacity={0.7}
                   >
-                    <Text style={styles.resendText}>
-                      Didn't receive the code? Resend OTP
+                    <Text
+                      style={[
+                        styles.resendText,
+                        seconds > 0 && styles.resendDisabled,
+                      ]}
+                    >
+                      Resend OTP
                     </Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                    <Text style={styles.backText}>← Back</Text>
+                  <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => setLoginStep("forgot")}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.backButtonText}>← Change Email</Text>
                   </TouchableOpacity>
-                </>
+                </View>
               )}
 
               {/* =================================================
-                  RESET PASSWORD
+                  STEP: RESET PASSWORD
               ================================================= */}
-
               {loginStep === "reset" && (
-                <>
-                  {/* 3D PASSWORD ICON */}
-
-                  <View style={styles.passwordIconWrapper}>
-                    <View style={styles.passwordIconShadow} />
-
-                    <View style={styles.passwordIcon}>
-                      <View style={styles.lockShackle} />
-
-                      <View style={styles.lockBody}>
-                        <View style={styles.lockKeyhole} />
-                      </View>
-                    </View>
+                <View>
+                  <View style={styles.stepCircle}>
+                    <Text style={styles.stepCircleText}>3</Text>
                   </View>
 
-                  <Text style={styles.loginTitle}>Create New Password</Text>
-
-                  <Text style={styles.loginSubtitle}>
-                    Create a strong password to keep your Medicine Shop account
-                    secure.
+                  <Text style={styles.modalTitle}>Create New Password</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Create a strong password for your MEDICARE account.
                   </Text>
 
                   {/* NEW PASSWORD */}
-
                   <Text style={styles.inputLabel}>New Password</Text>
-
-                  <View style={styles.passwordInputWrapper}>
+                  <View style={styles.passwordContainer}>
                     <TextInput
-                      style={styles.passwordInput}
-                      placeholder="Enter new password"
-                      placeholderTextColor="#8AA0A7"
                       value={newPassword}
                       onChangeText={setNewPassword}
+                      placeholder="Enter new password"
+                      placeholderTextColor="#9AAEB4"
                       secureTextEntry={!showNewPassword}
+                      style={styles.passwordInput}
                     />
-
                     <TouchableOpacity
-                      style={styles.eyeButton}
                       onPress={() => setShowNewPassword(!showNewPassword)}
+                      style={styles.eyeButton}
+                      activeOpacity={0.7}
                     >
-                      <Text style={styles.eyeText}>👁</Text>
+                      <Text style={styles.eyeText}>
+                        {showNewPassword ? "Hide" : "Show"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
-                  {/* PASSWORD REQUIREMENTS */}
-
-                  {newPassword.length > 0 &&
-                    !(
-                      newPassword.length >= 8 &&
-                      /[A-Z]/.test(newPassword) &&
-                      /[a-z]/.test(newPassword) &&
-                      /[0-9]/.test(newPassword)
-                    ) && (
-                      <View style={styles.passwordRequirements}>
-                        <View style={styles.requirementsHeader}>
-                          <View style={styles.requirementsDot} />
-
-                          <Text style={styles.requirementsTitle}>
-                            Password requirements
-                          </Text>
-                        </View>
-
-                        <Text style={styles.requirementText}>
-                          • At least 8 characters
-                        </Text>
-
-                        <Text style={styles.requirementText}>
-                          • One uppercase letter
-                        </Text>
-
-                        <Text style={styles.requirementText}>
-                          • One lowercase letter
-                        </Text>
-
-                        <Text style={styles.requirementText}>• One number</Text>
-                      </View>
-                    )}
+                  {renderPasswordRequirements()}
 
                   {/* CONFIRM PASSWORD */}
-
-                  <Text style={styles.inputLabel}>Confirm New Password</Text>
-
-                  <View style={styles.passwordInputWrapper}>
+                  <Text style={styles.inputLabel}>Confirm Password</Text>
+                  <View style={styles.passwordContainer}>
                     <TextInput
-                      style={styles.passwordInput}
-                      placeholder="Confirm new password"
-                      placeholderTextColor="#8AA0A7"
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
+                      placeholder="Confirm your password"
+                      placeholderTextColor="#9AAEB4"
                       secureTextEntry={!showConfirmPassword}
+                      style={styles.passwordInput}
                     />
-
                     <TouchableOpacity
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                       style={styles.eyeButton}
-                      onPress={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
+                      activeOpacity={0.7}
                     >
-                      <Text style={styles.eyeText}>👁</Text>
+                      <Text style={styles.eyeText}>
+                        {showConfirmPassword ? "Hide" : "Show"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
-                  {/* PASSWORD MISMATCH MESSAGE */}
+                  {confirmPassword && newPassword !== confirmPassword && (
+                    <Text style={styles.passwordMismatch}>
+                      Passwords do not match.
+                    </Text>
+                  )}
 
-                  {confirmPassword.length > 0 &&
-                    confirmPassword !== newPassword && (
-                      <Text style={styles.passwordMismatchText}>
-                        Passwords do not match
-                      </Text>
-                    )}
-
-                  {/* CREATE PASSWORD BUTTON */}
+                  {/* RESET BUTTON */}
+                  <TouchableOpacity
+                    style={styles.modalPrimaryButton}
+                    onPress={resetPassword}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={styles.modalPrimaryButtonText}>
+                      Update Password
+                    </Text>
+                  </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.createPasswordButton}
-                    onPress={resetPassword}
+                    style={styles.backButton}
+                    onPress={() => setLoginStep("login")}
+                    activeOpacity={0.7}
                   >
-                    <View style={styles.button3DLayer} />
-
-                    <Text style={styles.createPasswordText}>
-                      Create New Password
-                    </Text>
-
-                    <Text style={styles.buttonArrow}>→</Text>
+                    <Text style={styles.backButtonText}>← Cancel</Text>
                   </TouchableOpacity>
-
-                  {/* BACK */}
-
-                  <TouchableOpacity style={styles.backButton} onPress={goBack}>
-                    <Text style={styles.backText}>← Back to Verification</Text>
-                  </TouchableOpacity>
-                </>
+                </View>
               )}
 
               {/* =================================================
-                  SUCCESS
+                  STEP: SUCCESS
               ================================================= */}
-
               {loginStep === "success" && (
-                <>
+                <View style={styles.successContainer}>
                   <View style={styles.successCircle}>
-                    <Text style={styles.successCheck}>✓</Text>
+                    <Text style={styles.successSymbol}>✓</Text>
                   </View>
 
-                  <Text style={styles.loginTitle}>Password Changed</Text>
-
-                  <Text style={styles.loginSubtitle}>
-                    Your password has been successfully updated.
-                  </Text>
-
-                  <Text style={styles.successDescription}>
-                    You can now sign in securely using your new password.
+                  <Text style={styles.modalTitle}>Password Updated</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Your password has been changed successfully. You can now log in with your new credentials.
                   </Text>
 
                   <TouchableOpacity
-                    style={styles.loginButton}
-                    onPress={() => {
-                      setLoginStep("login");
-                      setNewPassword("");
-                      setConfirmPassword("");
-                      setOtp(["", "", "", "", "", ""]);
-                    }}
+                    style={styles.modalPrimaryButton}
+                    onPress={() => setLoginStep("login")}
+                    activeOpacity={0.85}
                   >
-                    <Text style={styles.loginButtonText}>Back to Login</Text>
+                    <Text style={styles.modalPrimaryButtonText}>
+                      Continue to Login
+                    </Text>
                   </TouchableOpacity>
-
-                  <Text style={styles.securityText}>
-                    🔒 Your account is now protected with your new password.
-                  </Text>
-                </>
+                </View>
               )}
             </ScrollView>
           </View>
         </View>
       </Modal>
-    </View>
+    );
+  };
+
+  /* ==========================================================
+     HERO HEIGHT CALCULATION
+  ========================================================== */
+
+  const heroMinHeight = isMobile
+    ? Math.max(540, height * 0.72)
+    : Math.max(680, height * 0.82);
+
+  /* ==========================================================
+     MAIN WEBSITE RETURN
+  ========================================================== */
+
+  return (
+    <>
+      {/* 1. HIDE EXPO ROUTER HEADER TO REMOVE TOP 'INDEX' TEXT */}
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <View style={styles.fullScreen}>
+        {/* =====================================================
+            HEADER / NAVBAR
+        ===================================================== */}
+        <View
+          style={[
+            styles.navbar,
+            isMobile && styles.navbarMobile,
+            isSmallMobile && styles.navbarSmallMobile,
+          ]}
+        >
+          <View style={styles.navbarInner}>
+            {/* BRAND / LOGO */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.brand}
+              onPress={() => {}}
+            >
+              <View style={styles.logoBadge}>
+                <LinearGradient
+                  colors={["#0EA5B7", "#083344"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.logoBadgeGradient}
+                >
+                  <Ionicons name="medkit" size={20} color="#FFFFFF" />
+                </LinearGradient>
+              </View>
+
+              <View style={styles.brandTextWrapper}>
+                <View style={styles.brandTitleRow}>
+                  <Text style={styles.brandTitle}>MEDICARE</Text>
+                  <View style={styles.brandDot} />
+                </View>
+                <Text style={styles.brandSubTitle}>SMART PHARMACY OS</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* DESKTOP NAVIGATION LINKS */}
+            {!isMobile && (
+              <View style={styles.navigation}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  style={styles.navItemActive}
+                >
+                  <View style={styles.activeNavDot} />
+                  <Text style={styles.navTextActive}>Home</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity activeOpacity={0.7} style={styles.navItem}>
+                  <Text style={styles.navText}>Solutions</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity activeOpacity={0.7} style={styles.navItem}>
+                  <Text style={styles.navText}>Inventory</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity activeOpacity={0.7} style={styles.navItem}>
+                  <Text style={styles.navText}>About</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity activeOpacity={0.7} style={styles.navItem}>
+                  <Text style={styles.navText}>Contact</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* NAVBAR ACTION BUTTON */}
+            <TouchableOpacity
+              style={styles.navbarLoginBtn}
+              onPress={openLogin}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name="person-outline"
+                size={15}
+                color="#38BDF8"
+                style={styles.loginBtnIcon}
+              />
+              <Text style={styles.navbarLoginText}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* =====================================================
+            SCROLLABLE LANDING PAGE CONTENT
+        ===================================================== */}
+        <ScrollView
+          style={styles.mainScrollView}
+          contentContainerStyle={styles.mainScrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* ===================================================
+              HERO SECTION
+          =================================================== */}
+          <View
+            style={[
+              styles.hero,
+              { minHeight: heroMinHeight },
+              isMobile && styles.heroMobile,
+            ]}
+          >
+            {/* HERO BACKGROUND IMAGE */}
+            <Animated.Image
+              source={heroImages[heroImageIndex]}
+              resizeMode="cover"
+              style={[
+                styles.heroBackgroundImage,
+                Platform.OS === "web" &&
+                  ({
+                    objectPosition: isMobile ? "center center" : "75% center",
+                  } as any),
+                {
+                  opacity: imageOpacity,
+                  transform: [{ translateX: imageTranslate }],
+                },
+              ]}
+            />
+
+            {/* HORIZONTAL GRADIENT: DARK TEAL ON LEFT FOR TEXT READABILITY, CLEAR ON PHARMACIST */}
+            <LinearGradient
+              colors={
+                isMobile
+                  ? [
+                      "rgba(5, 22, 29, 0.96)",
+                      "rgba(5, 22, 29, 0.88)",
+                      "rgba(5, 22, 29, 0.72)",
+                    ]
+                  : [
+                      "rgba(4, 20, 26, 0.98)",
+                      "rgba(5, 24, 32, 0.92)",
+                      "rgba(7, 30, 38, 0.76)",
+                      "rgba(7, 30, 38, 0.35)",
+                      "rgba(7, 30, 38, 0.18)",
+                    ]
+              }
+              locations={isMobile ? [0, 0.45, 1] : [0, 0.38, 0.58, 0.82, 1]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+
+            {/* VERTICAL GRADIENT: SEAMLESS VIGNETTE AND BOTTOM BLEND */}
+            <LinearGradient
+              colors={[
+                "rgba(4, 20, 26, 0.5)",
+                "transparent",
+                "rgba(7, 30, 38, 0.85)",
+                "#071E26",
+              ]}
+              locations={[0, 0.3, 0.82, 1]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+
+            {/* HERO MAIN CONTENT WRAPPER */}
+            <View style={styles.heroInnerContainer}>
+              <Animated.View
+                style={[
+                  styles.heroContent,
+                  isMobile && styles.heroContentMobile,
+                  {
+                    opacity: heroFadeAnim,
+                    transform: [{ translateY: heroSlideAnim }],
+                  },
+                ]}
+              >
+                {/* FLOATING BADGE CHIP */}
+                <Animated.View
+                  style={[
+                    styles.badgeChip,
+                    {
+                      transform: [{ translateY: floatAnim }],
+                    },
+                  ]}
+                >
+                  <View style={styles.badgePulseOuter}>
+                    <View style={styles.badgePulseInner} />
+                  </View>
+                  <Text style={styles.badgeText}>
+                    SMART PHARMACY MANAGEMENT PLATFORM
+                  </Text>
+                </Animated.View>
+
+                {/* MAIN HERO HEADLINE */}
+                <Text
+                  style={[
+                    styles.heroTitle,
+                    isMobile && styles.heroTitleMobile,
+                    isSmallMobile && styles.heroTitleSmallMobile,
+                  ]}
+                >
+                  Next-Gen Medicine{"\n"}
+                  <Text style={styles.heroTitleAccent}>
+                    Shop Management
+                  </Text>
+                </Text>
+
+                {/* HERO DESCRIPTION */}
+                <Text
+                  style={[
+                    styles.heroDescription,
+                    isMobile && styles.heroDescriptionMobile,
+                  ]}
+                >
+                  Streamline medicine billing, verified inventory tracking, expiry
+                  monitoring, and real-time pharmacy operations with intelligent
+                  precision.
+                </Text>
+
+                {/* CTA BUTTONS ROW */}
+                <View
+                  style={[
+                    styles.buttonRow,
+                    isMobile && styles.buttonRowMobile,
+                  ]}
+                >
+                  {/* PROMINENT PRIMARY CTA */}
+                  <TouchableOpacity
+                    style={styles.primaryCtaTouchable}
+                    onPress={openLogin}
+                    activeOpacity={0.88}
+                  >
+                    <LinearGradient
+                      colors={["#00B4D8", "#0EA5E9", "#0284C7"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.primaryCtaGradient}
+                    >
+                      <Text style={styles.primaryCtaText}>Get Started</Text>
+                      <View style={styles.ctaArrowCircle}>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={16}
+                          color="#FFFFFF"
+                        />
+                      </View>
+                    </LinearGradient>
+                  </TouchableOpacity>
+
+                  {/* PROMINENT SECONDARY CTA */}
+                  <TouchableOpacity
+                    style={styles.secondaryCtaButton}
+                    onPress={openLogin}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name="play-circle-outline"
+                      size={18}
+                      color="#38BDF8"
+                      style={styles.secondaryCtaIcon}
+                    />
+                    <Text style={styles.secondaryCtaText}>Live Demo</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* REFINED INTERACTIVE CAROUSEL INDICATORS */}
+                <View style={styles.carouselBar}>
+                  <Text style={styles.carouselLabel}>VIEW:</Text>
+                  <View style={styles.carouselIndicators}>
+                    {heroImages.map((_, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        onPress={() => switchImage(index)}
+                        activeOpacity={0.7}
+                        style={styles.indicatorHitArea}
+                      >
+                        <View
+                          style={[
+                            styles.dot,
+                            index === heroImageIndex
+                              ? styles.activeDot
+                              : styles.inactiveDot,
+                          ]}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text style={styles.carouselCounter}>
+                    0{heroImageIndex + 1} / 0{heroImages.length}
+                  </Text>
+                </View>
+              </Animated.View>
+
+              {/* DESKTOP PHARMACIST HIGHLIGHT FLOATING CARD */}
+              {!isMobile && (
+                <Animated.View
+                  style={[
+                    styles.floatingPharmacistBadge,
+                    {
+                      transform: [
+                        {
+                          translateY: Animated.multiply(floatAnim, -1),
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <View style={styles.floatingBadgeIcon}>
+                    <Ionicons
+                      name="shield-checkmark"
+                      size={22}
+                      color="#38BDF8"
+                    />
+                  </View>
+                  <View>
+                    <Text style={styles.floatingBadgeTitle}>
+                      Verified Dispensing
+                    </Text>
+                    <Text style={styles.floatingBadgeSubtitle}>
+                      Pharmacist Oversight • FDA Compliant
+                    </Text>
+                  </View>
+                </Animated.View>
+              )}
+            </View>
+          </View>
+
+          {/* ===================================================
+              4 STATISTICS SECTION (BELOW HERO CONTENT - NO OVERLAP)
+          =================================================== */}
+          <Animated.View
+            style={[
+              styles.statsSection,
+              {
+                opacity: statsFadeAnim,
+                transform: [{ translateY: statsSlideAnim }],
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.statsGrid,
+                isMobile && styles.statsGridMobile,
+              ]}
+            >
+              {STATS_DATA.map((item, index) => (
+                <View
+                  key={item.number}
+                  style={[
+                    styles.statCard,
+                    isMobile && styles.statCardMobile,
+                  ]}
+                >
+                  <View style={styles.statHeaderRow}>
+                    <View style={styles.statNumberBadge}>
+                      <Text style={styles.statNumberText}>{item.number}</Text>
+                    </View>
+                    <View style={styles.statChipBadge}>
+                      <Text style={styles.statChipText}>{item.badge}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.statTitle}>{item.title}</Text>
+                  <Text style={styles.statSubtitle}>{item.subtitle}</Text>
+
+                  {/* SUBTLE CARD ACCENT LINE */}
+                  <View style={styles.statAccentLine} />
+                </View>
+              ))}
+            </View>
+          </Animated.View>
+
+          {/* ===================================================
+              FOOTER BRAND STRIP
+          =================================================== */}
+          <View style={styles.footerStrip}>
+            <Text style={styles.footerText}>
+              MEDICARE SMART PHARMACY PLATFORM • ALL RIGHTS RESERVED
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* LOGIN MODAL */}
+        {renderLoginModal()}
+      </View>
+    </>
   );
 }
 
-/* =========================================================
+/* ============================================================
    STYLES
-========================================================= */
+============================================================ */
 
 const styles = StyleSheet.create({
-  /* =======================================================
-     MAIN CONTAINER
-  ======================================================= */
-
-  container: {
+  /* ==========================================================
+     MAIN FULL SCREEN CONTAINER
+  ========================================================== */
+  fullScreen: {
     flex: 1,
-    backgroundColor: "#F5F9FA",
+    backgroundColor: "#071E26",
   },
 
-  /* =======================================================
-     HEADER
-  ======================================================= */
+  /* ==========================================================
+     NAVBAR
+  ========================================================== */
+  navbar: {
+    height: 74,
+    backgroundColor: "rgba(7, 30, 38, 0.96)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(56, 189, 248, 0.12)",
+    zIndex: 30,
+    justifyContent: "center",
+    paddingHorizontal: 48,
+  },
 
-  header: {
-    height: 82,
-    backgroundColor: "#083C4A",
-    paddingHorizontal: 35,
+  navbarMobile: {
+    height: 68,
+    paddingHorizontal: 18,
+  },
+
+  navbarSmallMobile: {
+    paddingHorizontal: 12,
+  },
+
+  navbarInner: {
+    width: "100%",
+    maxWidth: 1340,
+    alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
 
-  headerScrolled: {
-    height: 70,
-    paddingHorizontal: 30,
-    elevation: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-  },
-
-  brandContainer: {
+  brand: {
     flexDirection: "row",
     alignItems: "center",
   },
 
-  logoBox: {
-    width: 44,
-    height: 44,
+  logoBadge: {
+    width: 42,
+    height: 42,
     borderRadius: 13,
-    backgroundColor: "#FFFFFF",
+    overflow: "hidden",
+    marginRight: 13,
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.35)",
+  },
+
+  logoBadgeGradient: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
 
-  crossVertical: {
-    position: "absolute",
-    width: 9,
-    height: 27,
-    backgroundColor: "#0D5367",
-    borderRadius: 2,
+  brandTextWrapper: {
+    justifyContent: "center",
   },
 
-  crossHorizontal: {
-    position: "absolute",
-    width: 27,
-    height: 9,
-    backgroundColor: "#0D5367",
-    borderRadius: 2,
+  brandTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
 
-  logoText: {
-    color: "#FFFFFF",
+  brandTitle: {
     fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: 1,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: 2,
   },
 
-  logoSubText: {
-    color: "#B7D7DE",
-    fontSize: 9,
-    marginTop: 2,
+  brandDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#38BDF8",
+    marginLeft: 4,
+    marginBottom: 4,
   },
 
-  headerLoginButton: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 22,
+  brandSubTitle: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#38BDF8",
+    letterSpacing: 1.8,
+    marginTop: -1,
   },
 
-  headerLoginText: {
-    color: "#0D5367",
+  navigation: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  navItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+
+  navItemActive: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(14, 165, 233, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.25)",
+  },
+
+  activeNavDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#38BDF8",
+    marginRight: 8,
+  },
+
+  navText: {
+    color: "rgba(255, 255, 255, 0.72)",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  navTextActive: {
+    color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "700",
   },
 
-  /* =======================================================
-     HERO
-  ======================================================= */
-
-  hero: {
-    backgroundColor: "#083C4A",
-    paddingHorizontal: 35,
-    paddingTop: 55,
-    paddingBottom: 70,
+  navbarLoginBtn: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 9,
+    backgroundColor: "rgba(14, 165, 233, 0.14)",
+    borderWidth: 1.5,
+    borderColor: "#0EA5E9",
+    borderRadius: 22,
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+
+  loginBtnIcon: {
+    marginRight: 7,
+  },
+
+  navbarLoginText: {
+    color: "#FFFFFF",
+    fontSize: 13.5,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+
+  /* ==========================================================
+     SCROLL CONTAINER
+  ========================================================== */
+  mainScrollView: {
+    flex: 1,
+    backgroundColor: "#071E26",
+  },
+
+  mainScrollContent: {
+    flexGrow: 1,
+    backgroundColor: "#071E26",
+  },
+
+  /* ==========================================================
+     HERO SECTION
+  ========================================================== */
+  hero: {
+    position: "relative",
+    overflow: "hidden",
+    justifyContent: "center",
+    paddingHorizontal: 64,
+    paddingVertical: 48,
+  },
+
+  heroMobile: {
+    paddingHorizontal: 20,
+    paddingVertical: 36,
+  },
+
+  heroBackgroundImage: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+  },
+
+  heroInnerContainer: {
+    width: "100%",
+    maxWidth: 1340,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    zIndex: 10,
   },
 
   heroContent: {
-    width: "55%",
+    width: "60%",
+    maxWidth: 680,
   },
 
-  heroSmallText: {
-    color: "#72C5D3",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    marginBottom: 14,
+  heroContentMobile: {
+    width: "100%",
+    maxWidth: "100%",
+  },
+
+  badgeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(14, 165, 233, 0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.4)",
+    borderRadius: 24,
+    paddingHorizontal: 15,
+    paddingVertical: 7,
+    marginBottom: 20,
+    shadowColor: "#0EA5E9",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+
+  badgePulseOuter: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "rgba(56, 189, 248, 0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 9,
+  },
+
+  badgePulseInner: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: "#38BDF8",
+  },
+
+  badgeText: {
+    color: "#BAE6FD",
+    fontSize: 11.5,
+    fontWeight: "800",
+    letterSpacing: 1.4,
   },
 
   heroTitle: {
     color: "#FFFFFF",
-    fontSize: 42,
-    lineHeight: 50,
-    fontWeight: "800",
+    fontSize: 54,
+    lineHeight: 64,
+    fontWeight: "900",
+    letterSpacing: -0.8,
+    marginBottom: 22,
+  },
+
+  heroTitleMobile: {
+    fontSize: 34,
+    lineHeight: 42,
+    marginBottom: 16,
+  },
+
+  heroTitleSmallMobile: {
+    fontSize: 29,
+    lineHeight: 36,
+  },
+
+  heroTitleAccent: {
+    color: "#38BDF8",
   },
 
   heroDescription: {
-    color: "#C7DDE2",
-    fontSize: 15,
+    color: "rgba(224, 242, 254, 0.9)",
+    fontSize: 16.5,
+    lineHeight: 28,
+    maxWidth: 540,
+    fontWeight: "400",
+    marginBottom: 32,
+  },
+
+  heroDescriptionMobile: {
+    fontSize: 14.5,
     lineHeight: 24,
-    marginTop: 18,
-    maxWidth: 500,
+    marginBottom: 24,
   },
 
-  primaryButton: {
-    backgroundColor: "#0A829A",
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 10,
-    marginTop: 25,
-    alignSelf: "flex-start",
+  /* ==========================================================
+     PROMINENT CTA BUTTONS
+  ========================================================== */
+  buttonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 36,
+    flexWrap: "wrap",
   },
 
-  primaryButtonText: {
+  buttonRowMobile: {
+    gap: 12,
+    marginBottom: 28,
+  },
+
+  primaryCtaTouchable: {
+    borderRadius: 32,
+    shadowColor: "#0284C7",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+
+  primaryCtaGradient: {
+    paddingHorizontal: 30,
+    paddingVertical: 16,
+    borderRadius: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.25)",
+  },
+
+  primaryCtaText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+
+  ctaArrowCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(255, 255, 255, 0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
+  },
+
+  secondaryCtaButton: {
+    paddingHorizontal: 26,
+    paddingVertical: 16,
+    borderRadius: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.07)",
+    borderWidth: 1.5,
+    borderColor: "rgba(56, 189, 248, 0.4)",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+
+  secondaryCtaIcon: {
+    marginRight: 8,
+  },
+
+  secondaryCtaText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
+    letterSpacing: 0.2,
   },
 
-  /* =======================================================
-     MEDICINE ILLUSTRATION
-  ======================================================= */
-
-  medicineIllustration: {
-    width: 280,
-    height: 280,
+  /* ==========================================================
+     CAROUSEL CONTROLS BAR
+  ========================================================== */
+  carouselBar: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-
-  bottleShadow: {
-    position: "absolute",
-    bottom: 30,
-    width: 170,
-    height: 28,
-    borderRadius: 50,
-    backgroundColor: "#062F3A",
-  },
-
-  bottle: {
-    width: 125,
-    height: 180,
-    backgroundColor: "#FFFFFF",
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(4, 20, 26, 0.65)",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.2)",
     borderRadius: 20,
-    position: "absolute",
-    bottom: 45,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    gap: 10,
+  },
+
+  carouselLabel: {
+    color: "rgba(255, 255, 255, 0.55)",
+    fontSize: 10.5,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  carouselIndicators: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 6,
   },
 
-  bottleCap: {
-    width: 90,
-    height: 25,
-    backgroundColor: "#0A829A",
-    borderRadius: 7,
+  indicatorHitArea: {
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+
+  dot: {
+    height: 7,
+    borderRadius: 4,
+  },
+
+  activeDot: {
+    width: 28,
+    backgroundColor: "#38BDF8",
+    shadowColor: "#38BDF8",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+
+  inactiveDot: {
+    width: 9,
+    backgroundColor: "rgba(255, 255, 255, 0.35)",
+  },
+
+  carouselCounter: {
+    color: "#BAE6FD",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginLeft: 2,
+  },
+
+  /* ==========================================================
+     DESKTOP FLOATING PHARMACIST BADGE
+  ========================================================== */
+  floatingPharmacistBadge: {
     position: "absolute",
-    top: -18,
+    right: 20,
+    bottom: 40,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(7, 30, 38, 0.88)",
+    borderWidth: 1.5,
+    borderColor: "rgba(56, 189, 248, 0.3)",
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 6,
+    gap: 14,
   },
 
-  bottleLabel: {
-    width: 100,
-    height: 85,
-    backgroundColor: "#EAF6F8",
-    marginTop: 50,
-    borderRadius: 10,
+  floatingBadgeIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "rgba(14, 165, 233, 0.16)",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  bottleTitle: {
-    color: "#0D5367",
-    fontSize: 19,
+  floatingBadgeTitle: {
+    color: "#FFFFFF",
+    fontSize: 14.5,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+
+  floatingBadgeSubtitle: {
+    color: "#94A3B8",
+    fontSize: 11.5,
+    fontWeight: "500",
+    marginTop: 2,
+  },
+
+  /* ==========================================================
+     4 STATISTICS SECTION (IN FLOW BELOW HERO - ZERO OVERLAP)
+  ========================================================== */
+  statsSection: {
+    width: "100%",
+    backgroundColor: "#071E26",
+    paddingHorizontal: 48,
+    paddingTop: 18,
+    paddingBottom: 48,
+  },
+
+  statsGrid: {
+    width: "100%",
+    maxWidth: 1340,
+    alignSelf: "center",
+    flexDirection: "row",
+    gap: 18,
+  },
+
+  statsGridMobile: {
+    flexDirection: "column",
+    gap: 14,
+  },
+
+  statCard: {
+    flex: 1,
+    backgroundColor: "rgba(10, 38, 48, 0.85)",
+    borderWidth: 1.5,
+    borderColor: "rgba(56, 189, 248, 0.18)",
+    borderRadius: 18,
+    padding: 20,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 4,
+    position: "relative",
+    overflow: "hidden",
+  },
+
+  statCardMobile: {
+    padding: 16,
+  },
+
+  statHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+
+  statNumberBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "rgba(56, 189, 248, 0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.3)",
+  },
+
+  statNumberText: {
+    color: "#38BDF8",
+    fontSize: 14,
     fontWeight: "900",
   },
 
-  bottleText: {
-    color: "#0D5367",
-    fontSize: 10,
+  statChipBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+  },
+
+  statChipText: {
+    color: "#BAE6FD",
+    fontSize: 10.5,
     fontWeight: "700",
+    letterSpacing: 0.4,
   },
 
-  capsule: {
-    width: 85,
-    height: 38,
-    borderRadius: 25,
-    backgroundColor: "#FFFFFF",
-    position: "absolute",
-    right: 10,
-    bottom: 45,
-    transform: [{ rotate: "-25deg" }],
-    overflow: "hidden",
-    flexDirection: "row",
-  },
-
-  capsuleTop: {
-    flex: 1,
-    backgroundColor: "#72C5D3",
-  },
-
-  capsuleBottom: {
-    flex: 1,
-    backgroundColor: "#EAF6F8",
-  },
-
-  tablet: {
-    width: 42,
-    height: 42,
-    borderRadius: 50,
-    backgroundColor: "#72C5D3",
-    position: "absolute",
-    left: 25,
-    bottom: 45,
-  },
-
-  tabletLine: {
-    width: 30,
-    height: 2,
-    backgroundColor: "#FFFFFF",
-    position: "absolute",
-    top: 20,
-    left: 6,
-  },
-
-  /* =======================================================
-     SERVICES
-  ======================================================= */
-
-  section: {
-    paddingHorizontal: 35,
-    paddingVertical: 60,
-  },
-
-  sectionSmallTitle: {
-    color: "#0A829A",
-    fontSize: 12,
+  statTitle: {
+    color: "#FFFFFF",
+    fontSize: 18,
     fontWeight: "800",
+    marginBottom: 4,
+    letterSpacing: 0.2,
+  },
+
+  statSubtitle: {
+    color: "rgba(224, 242, 254, 0.65)",
+    fontSize: 12.5,
+    fontWeight: "500",
+    lineHeight: 18,
+  },
+
+  statAccentLine: {
+    position: "absolute",
+    bottom: 0,
+    left: 20,
+    right: 20,
+    height: 2,
+    backgroundColor: "rgba(56, 189, 248, 0.25)",
+    borderRadius: 1,
+  },
+
+  /* ==========================================================
+     FOOTER STRIP
+  ========================================================== */
+  footerStrip: {
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.06)",
+    backgroundColor: "rgba(4, 20, 26, 0.95)",
+  },
+
+  footerText: {
+    color: "rgba(255, 255, 255, 0.4)",
+    fontSize: 11,
+    fontWeight: "700",
     letterSpacing: 1.5,
     textAlign: "center",
   },
 
-  sectionTitle: {
-    color: "#153B47",
-    fontSize: 30,
-    fontWeight: "800",
-    textAlign: "center",
-    marginTop: 8,
-  },
-
-  sectionDescription: {
-    color: "#70868D",
-    textAlign: "center",
-    fontSize: 14,
-    marginTop: 10,
-    marginBottom: 30,
-  },
-
-  serviceGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-
-  serviceCard: {
-    width: "48%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 25,
-    marginBottom: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-    elevation: 3,
-  },
-
-  serviceTitle: {
-    color: "#153B47",
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-
-  serviceText: {
-    color: "#70868D",
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
-  /* =======================================================
-     CTA
-  ======================================================= */
-
-  cta: {
-    backgroundColor: "#EAF6F8",
-    marginHorizontal: 35,
-    marginBottom: 50,
-    borderRadius: 20,
-    padding: 45,
-    alignItems: "center",
-  },
-
-  ctaTitle: {
-    color: "#153B47",
-    fontSize: 28,
-    fontWeight: "800",
-  },
-
-  ctaText: {
-    color: "#70868D",
-    fontSize: 14,
-    marginTop: 10,
-    textAlign: "center",
-  },
-
-  ctaButton: {
-    backgroundColor: "#0D5367",
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 10,
-    marginTop: 22,
-  },
-
-  ctaButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  /* =======================================================
-     FOOTER
-  ======================================================= */
-
-  footer: {
-    backgroundColor: "#083C4A",
-    paddingVertical: 35,
-    alignItems: "center",
-  },
-
-  footerBrand: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-
-  footerText: {
-    color: "#B7D7DE",
-    fontSize: 12,
-    marginTop: 8,
-  },
-
-  copyright: {
-    color: "#7FA7B0",
-    fontSize: 11,
-    marginTop: 15,
-  },
-
-  /* =======================================================
-     MODAL
-  ======================================================= */
-
-  modalOverlay: {
+  /* ==========================================================
+     LOGIN MODAL STYLES (PRESERVED AUTH FLOW)
+  ========================================================== */
+  modalBackground: {
     flex: 1,
-    backgroundColor: "rgba(4, 35, 43, 0.72)",
+    backgroundColor: "rgba(3, 14, 18, 0.8)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -1251,169 +1845,148 @@ const styles = StyleSheet.create({
 
   loginCard: {
     width: "100%",
-    maxWidth: 450,
-    maxHeight: "90%",
+    maxWidth: 440,
+    maxHeight: "92%",
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
-    padding: 32,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 25,
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    elevation: 10,
+    paddingHorizontal: 32,
+    paddingVertical: 28,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 16,
     position: "relative",
   },
 
-  loginScrollContent: {
-    paddingTop: 5,
-    paddingBottom: 10,
+  loginCardMobile: {
+    paddingHorizontal: 22,
+    paddingVertical: 24,
+    borderRadius: 20,
+  },
+
+  modalScrollContent: {
+    paddingBottom: 8,
   },
 
   closeButton: {
     position: "absolute",
-    right: 18,
-    top: 15,
+    right: -4,
+    top: -4,
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#F1F6F7",
+    backgroundColor: "#F1F5F9",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
   },
 
-  closeText: {
-    color: "#153B47",
-    fontSize: 25,
-    lineHeight: 28,
+  closeButtonText: {
+    fontSize: 15,
+    color: "#64748B",
+    fontWeight: "800",
   },
 
-  /* =======================================================
-     LOGIN LOGO
-  ======================================================= */
-
-  loginLogo: {
-    width: 55,
-    height: 55,
+  modalLogo: {
+    width: 54,
+    height: 54,
     borderRadius: 16,
     backgroundColor: "#EAF6F8",
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
-    marginBottom: 18,
+    marginBottom: 16,
+    shadowColor: "#0D5367",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
-  loginCrossVertical: {
+  modalCrossVertical: {
     position: "absolute",
-    width: 10,
-    height: 29,
+    width: 9,
+    height: 28,
     backgroundColor: "#0D5367",
-    borderRadius: 2,
+    borderRadius: 3,
   },
 
-  loginCrossHorizontal: {
+  modalCrossHorizontal: {
     position: "absolute",
-    width: 29,
-    height: 10,
+    width: 28,
+    height: 9,
     backgroundColor: "#0D5367",
-    borderRadius: 2,
+    borderRadius: 3,
   },
 
-  loginTitle: {
-    color: "#153B47",
-    fontSize: 27,
-    fontWeight: "800",
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#0F172A",
     textAlign: "center",
+    marginBottom: 6,
   },
 
-  loginSubtitle: {
-    color: "#70868D",
+  modalSubtitle: {
     fontSize: 13,
-    lineHeight: 20,
+    color: "#64748B",
     textAlign: "center",
-    marginTop: 7,
-    marginBottom: 25,
+    lineHeight: 20,
+    marginBottom: 20,
   },
-
-  /* =======================================================
-     INPUT
-  ======================================================= */
 
   inputLabel: {
-    color: "#153B47",
+    color: "#1E293B",
     fontSize: 13,
     fontWeight: "700",
-    marginBottom: 7,
+    marginBottom: 6,
+    marginTop: 10,
   },
 
   input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#D7E5E8",
-    borderRadius: 10,
-    paddingHorizontal: 15,
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    color: "#0F172A",
+    backgroundColor: "#F8FAFC",
     fontSize: 14,
-    color: "#153B47",
-    backgroundColor: "#FAFCFC",
-    marginBottom: 16,
   },
 
-  /* =======================================================
-     PASSWORD INPUT
-  ======================================================= */
-
-  passwordInputWrapper: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: "#D7E5E8",
-    borderRadius: 10,
-    backgroundColor: "#FAFCFC",
+  passwordContainer: {
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
-    paddingLeft: 15,
-    paddingRight: 12,
+    backgroundColor: "#F8FAFC",
   },
 
   passwordInput: {
     flex: 1,
     height: "100%",
-    color: "#153B47",
+    paddingHorizontal: 14,
+    color: "#0F172A",
     fontSize: 14,
   },
 
   eyeButton: {
-    width: 45,
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 14,
   },
 
   eyeText: {
-    fontSize: 20,
-    color: "#0D5367",
-  },
-
-  passwordMismatchText: {
-    color: "#D64545",
+    color: "#0A829A",
     fontSize: 12,
-    fontWeight: "600",
-    marginTop: -9,
-    marginLeft: 2,
-    marginBottom: 12,
+    fontWeight: "700",
   },
-
-  /* =======================================================
-     FORGOT PASSWORD
-  ======================================================= */
 
   forgotButton: {
     alignSelf: "flex-end",
-    marginTop: -3,
-    marginBottom: 20,
+    marginTop: 10,
+    marginBottom: 16,
   },
 
   forgotText: {
@@ -1422,333 +1995,195 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* =======================================================
-     LOGIN BUTTON
-  ======================================================= */
-
-  loginButton: {
-    height: 52,
-    borderRadius: 11,
+  modalPrimaryButton: {
+    height: 50,
     backgroundColor: "#0D5367",
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    marginTop: 14,
+    shadowColor: "#0D5367",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
 
-  loginButtonText: {
+  modalPrimaryButtonText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "800",
   },
 
-  /* =======================================================
-     SECURITY
-  ======================================================= */
-
   securityText: {
-    color: "#8AA0A7",
-    fontSize: 11,
     textAlign: "center",
-    marginTop: 18,
-    lineHeight: 17,
+    color: "#94A3B8",
+    fontSize: 11,
+    marginTop: 16,
+    fontWeight: "500",
   },
 
-  securityBox: {
-    backgroundColor: "#F5F9FA",
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 20,
-  },
-
-  securityTitle: {
-    color: "#153B47",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-
-  /* =======================================================
-     STEP ICON
-  ======================================================= */
-
-  stepIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 17,
+  stepCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#EAF6F8",
-    alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
+    alignSelf: "center",
+    marginBottom: 16,
   },
 
-  stepIconText: {
-    fontSize: 27,
+  stepCircleText: {
+    color: "#0D5367",
+    fontSize: 18,
+    fontWeight: "800",
   },
-
-  /* =======================================================
-     BACK
-  ======================================================= */
 
   backButton: {
     alignItems: "center",
     marginTop: 18,
   },
 
-  backText: {
+  backButtonText: {
     color: "#0A829A",
     fontSize: 13,
     fontWeight: "700",
   },
 
-  /* =======================================================
-     OTP
-  ======================================================= */
+  otpEmail: {
+    textAlign: "center",
+    color: "#0D5367",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: -14,
+    marginBottom: 18,
+  },
 
   otpContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 5,
+    marginTop: 4,
+    marginBottom: 16,
+    gap: 6,
   },
 
   otpInput: {
-    width: 45,
-    height: 52,
-    borderWidth: 1,
-    borderColor: "#D7E5E8",
-    borderRadius: 10,
-    backgroundColor: "#FAFCFC",
-    color: "#153B47",
-    fontSize: 21,
-    fontWeight: "700",
-  },
-
-  otpFilled: {
-    borderColor: "#0A829A",
-    backgroundColor: "#EAF6F8",
-  },
-
-  timer: {
+    flex: 1,
+    height: 50,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 11,
     textAlign: "center",
-    color: "#70868D",
-    fontSize: 12,
-    marginTop: 18,
-  },
-
-  timerBold: {
-    color: "#0D5367",
+    fontSize: 20,
     fontWeight: "800",
+    color: "#0F172A",
+    backgroundColor: "#F8FAFC",
   },
 
-  timerExpired: {
-    color: "#D64545",
-    fontSize: 13,
-    fontWeight: "700",
+  otpInputActive: {
+    borderColor: "#0A829A",
+    backgroundColor: "#F0FDFA",
+  },
+
+  timerText: {
+    textAlign: "center",
+    color: "#64748B",
+    fontSize: 12,
+    marginBottom: 10,
+    fontWeight: "600",
   },
 
   resendButton: {
     alignItems: "center",
-    marginTop: 16,
+    marginTop: 14,
   },
 
   resendText: {
     color: "#0A829A",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
   },
 
-  /* =======================================================
-     SUCCESS
-  ======================================================= */
-
-  successCircle: {
-    width: 75,
-    height: 75,
-    borderRadius: 38,
-    backgroundColor: "#EAF6F8",
-    alignSelf: "center",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 22,
+  resendDisabled: {
+    color: "#94A3B8",
   },
 
-  successCheck: {
-    color: "#0D5367",
-    fontSize: 42,
-    fontWeight: "800",
+  disabledButton: {
+    opacity: 0.5,
   },
 
-  successDescription: {
-    color: "#70868D",
-    fontSize: 13,
-    lineHeight: 20,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-
-  /* =======================================================
-     3D PASSWORD ICON
-  ======================================================= */
-
-  passwordIconWrapper: {
-    width: 82,
-    height: 82,
-    alignSelf: "center",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-    position: "relative",
-  },
-
-  passwordIconShadow: {
-    position: "absolute",
-    width: 62,
-    height: 18,
-    borderRadius: 30,
-    backgroundColor: "#C9DDE1",
-    bottom: 4,
-    transform: [
-      {
-        scaleX: 1.1,
-      },
-    ],
-  },
-
-  passwordIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    backgroundColor: "#0D5367",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: 10,
-    elevation: 8,
-    shadowColor: "#083C4A",
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
-  },
-
-  lockShackle: {
-    position: "absolute",
-    width: 25,
-    height: 25,
-    borderWidth: 6,
-    borderColor: "#72C5D3",
-    borderBottomWidth: 0,
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
-    top: 8,
-  },
-
-  lockBody: {
-    width: 34,
-    height: 27,
-    borderRadius: 7,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  lockKeyhole: {
-    width: 7,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#0D5367",
-  },
-
-  /* =======================================================
-     PASSWORD REQUIREMENTS
-  ======================================================= */
-
-  passwordRequirements: {
-    backgroundColor: "#F5F9FA",
+  requirementsBox: {
+    backgroundColor: "#F8FAFC",
     borderWidth: 1,
-    borderColor: "#E1ECEE",
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 2,
-    marginBottom: 17,
-    shadowColor: "#0D5367",
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-  },
-
-  requirementsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 9,
-  },
-
-  requirementsDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: "#0A829A",
-    marginRight: 8,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+    marginBottom: 8,
   },
 
   requirementsTitle: {
-    color: "#153B47",
+    color: "#334155",
     fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  requirementRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+
+  requirementIcon: {
+    fontSize: 12,
+    color: "#94A3B8",
+    marginRight: 6,
     fontWeight: "800",
+  },
+
+  requirementPassed: {
+    color: "#16A34A",
   },
 
   requirementText: {
-    fontSize: 12,
-    color: "#8AA0A7",
-    marginTop: 7,
+    color: "#64748B",
+    fontSize: 11,
     fontWeight: "500",
   },
 
-  /* =======================================================
-     CREATE PASSWORD BUTTON
-  ======================================================= */
+  requirementPassedText: {
+    color: "#16A34A",
+    fontWeight: "600",
+  },
 
-  createPasswordButton: {
-    height: 53,
-    borderRadius: 11,
-    backgroundColor: "#0D5367",
+  passwordMismatch: {
+    color: "#DC2626",
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 2,
+    fontWeight: "600",
+  },
+
+  successContainer: {
+    alignItems: "center",
+    paddingVertical: 16,
+  },
+
+  successCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#DCFCE7",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    position: "relative",
-    overflow: "hidden",
-    elevation: 5,
-    shadowColor: "#083C4A",
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 5,
-    },
+    marginBottom: 18,
   },
 
-  button3DLayer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 6,
-    backgroundColor: "#062F3A",
-  },
-
-  createPasswordText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-
-  buttonArrow: {
-    color: "#72C5D3",
-    fontSize: 20,
-    fontWeight: "700",
-    marginLeft: 10,
+  successSymbol: {
+    color: "#16A34A",
+    fontSize: 34,
+    fontWeight: "900",
   },
 });
