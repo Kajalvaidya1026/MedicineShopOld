@@ -10,28 +10,29 @@ import {
   View,
 } from "react-native";
 
+import { Ionicons } from "@expo/vector-icons";
 import AuthAnimatedCard from "../components/AuthAnimatedCard";
 
 export default function OTP() {
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [otp, setOtp] = useState(["", "", "", ""]);
   const [timer, setTimer] = useState(21);
   const [error, setError] = useState("");
 
   const [verified, setVerified] = useState(false);
 
-  const inputRefs = useRef<Array<TextInput | null>>([]);
+  const inputRefs = useRef<(TextInput | null)[]>([]);
 
   // Fill animation for each OTP box
-  const fillAnimations = useRef(
-    Array.from({ length: 6 }, () => new Animated.Value(0))
-  ).current;
+  const [fillAnimations] = useState(() =>
+    Array.from({ length: 4 }, () => new Animated.Value(0))
+  );
 
   // Green success animation
-  const successScale = useRef(new Animated.Value(0)).current;
-  const successOpacity = useRef(new Animated.Value(0)).current;
+  const [successScale] = useState(() => new Animated.Value(0));
+  const [successOpacity] = useState(() => new Animated.Value(0));
 
   // Checkmark animation
-  const checkScale = useRef(new Animated.Value(0)).current;
+  const [checkScale] = useState(() => new Animated.Value(0));
 
   // Timer
   useEffect(() => {
@@ -67,12 +68,12 @@ export default function OTP() {
     animateFill(index, digit !== "");
 
     // Move to next box
-    if (digit && index < 5) {
+    if (digit && index < otp.length - 1) {
       inputRefs.current[index + 1]?.focus();
     }
 
     // Hide keyboard after last digit
-    if (digit && index === 5) {
+    if (digit && index === otp.length - 1) {
       Keyboard.dismiss();
     }
   };
@@ -93,13 +94,13 @@ export default function OTP() {
   const verifyOTP = () => {
     const enteredOTP = otp.join("");
 
-    if (enteredOTP.length !== 6) {
-      setError("Please enter the complete 6-digit OTP.");
+    if (enteredOTP.length !== 4) {
+      setError("Please enter the complete 4-digit code.");
       return;
     }
 
     // Demo OTP
-    if (enteredOTP !== "234234") {
+    if (enteredOTP !== "2342") {
       setError("Invalid OTP. Please try again.");
       return;
     }
@@ -156,7 +157,7 @@ export default function OTP() {
 
   const resendOTP = () => {
     setTimer(21);
-    setOtp(["", "", "", "", "", ""]);
+    setOtp(["", "", "", ""]);
     setError("");
     setVerified(false);
 
@@ -175,86 +176,74 @@ export default function OTP() {
     <View style={styles.container}>
       <AuthAnimatedCard>
         <View style={styles.header}>
-          <Text style={styles.title}>Verify OTP</Text>
-
+          <View style={styles.headerIcon}>
+            <Ionicons name="lock-closed" size={28} color="#0D7180" />
+          </View>
+          <Text style={styles.title}>Verification Code</Text>
           <Text style={styles.subtitle}>
-            Enter the 6-digit OTP sent to your email
+            {verified
+              ? "Your code has been verified."
+              : "Enter the 4-digit code sent to your registered device."}
           </Text>
         </View>
 
         {/* OTP BOXES */}
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => {
-            /*
-             * ScaleY starts from 0 and grows to 1.
-             * The transformOrigin effect is simulated by
-             * positioning the fill at the bottom.
-             */
-            const scaleY = fillAnimations[index].interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 1],
-            });
+        {!verified && (
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => {
+              const scaleY = fillAnimations[index].interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 1],
+              });
 
-            const translateY = fillAnimations[index].interpolate({
-              inputRange: [0, 1],
-              outputRange: [25, 0],
-            });
+              const translateY = fillAnimations[index].interpolate({
+                inputRange: [0, 1],
+                outputRange: [25, 0],
+              });
 
-            const fillOpacity = fillAnimations[index].interpolate({
-              inputRange: [0, 0.2, 1],
-              outputRange: [0, 0.7, 1],
-            });
+              const fillOpacity = fillAnimations[index].interpolate({
+                inputRange: [0, 0.2, 1],
+                outputRange: [0, 0.7, 1],
+              });
 
-            return (
-              <View key={index} style={styles.otpBoxWrapper}>
-                {/* Animated bottom-to-top fill */}
-                <Animated.View
-                  pointerEvents="none"
-                  style={[
-                    styles.otpFill,
-                    {
-                      opacity: fillOpacity,
-                      transform: [
-                        {
-                          translateY,
-                        },
-                        {
-                          scaleY,
-                        },
-                      ],
-                    },
-                    verified && styles.verifiedFill,
-                  ]}
-                />
-
-                <TextInput
-                  ref={(ref) => {
-                    inputRefs.current[index] = ref;
-                  }}
-                  value={digit}
-                  onChangeText={(value) =>
-                    handleOTPChange(value, index)
-                  }
-                  onKeyPress={(event) =>
-                    handleKeyPress(event, index)
-                  }
-                  keyboardType="number-pad"
-                  maxLength={1}
-                  editable={!verified}
-                  style={[
-                    styles.otpInput,
-                    verified && styles.verifiedText,
-                  ]}
-                  textAlign="center"
-                  selectTextOnFocus
-                />
-              </View>
-            );
-          })}
-        </View>
+              return (
+                <View key={index} style={styles.otpBoxWrapper}>
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[
+                      styles.otpFill,
+                      {
+                        opacity: fillOpacity,
+                        transform: [{ translateY }, { scaleY }],
+                      },
+                      verified && styles.verifiedFill,
+                    ]}
+                  />
+                  <TextInput
+                    ref={(ref) => {
+                      inputRefs.current[index] = ref;
+                    }}
+                    value={digit}
+                    onChangeText={(value) => handleOTPChange(value, index)}
+                    onKeyPress={(event) => handleKeyPress(event, index)}
+                    keyboardType="number-pad"
+                    maxLength={1}
+                    editable={!verified}
+                    style={[
+                      styles.otpInput,
+                      verified && styles.verifiedText,
+                    ]}
+                    textAlign="center"
+                    selectTextOnFocus
+                  />
+                </View>
+              );
+            })}
+          </View>
+        )}
 
         {/* ERROR */}
-        {error !== "" && (
+        {!verified && error !== "" && (
           <Text style={styles.errorText}>{error}</Text>
         )}
 
@@ -331,13 +320,10 @@ export default function OTP() {
               <Text style={styles.checkMark}>✓</Text>
             </Animated.View>
 
-            <Text style={styles.successTitle}>
-              OTP Verified
-            </Text>
-
-            <Text style={styles.successMessage}>
-              Your OTP has been verified successfully.
-            </Text>
+            <View style={styles.secureText}>
+              <Ionicons name="lock-closed" size={13} color="#168C68" />
+              <Text style={styles.secureTextLabel}>Verified and secure</Text>
+            </View>
           </Animated.View>
         )}
       </AuthAnimatedCard>
@@ -351,24 +337,41 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "#EEF2F7",
+    backgroundColor: "#F5F9FA",
   },
 
   header: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 18,
+  },
+
+  headerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    backgroundColor: "#EAF6F8",
+    borderWidth: 1,
+    borderColor: "#D3E6E9",
+    shadowColor: "#0D5367",
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.16,
+    shadowRadius: 11,
+    elevation: 6,
   },
 
   title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: "#20242A",
-    marginBottom: 8,
+    fontSize: 25,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 7,
   },
 
   subtitle: {
     fontSize: 14,
-    color: "#777F89",
+    color: "#64748B",
     textAlign: "center",
     lineHeight: 21,
   },
@@ -377,17 +380,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     gap: 8,
-    marginBottom: 18,
+    marginBottom: 16,
   },
 
   otpBoxWrapper: {
-    width: 45,
-    height: 55,
-    borderRadius: 12,
+    width: 56,
+    height: 62,
+    borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "#E7EBF0",
-    borderWidth: 1,
-    borderColor: "#D4DAE1",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderBottomWidth: 3,
+    borderColor: "#D7E3ED",
+    borderBottomColor: "#C5D4E1",
     position: "relative",
 
     shadowColor: "#000",
@@ -410,12 +415,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: "100%",
-    backgroundColor: "65#6C63FF",
-    borderRadius: 11,
+    backgroundColor: "#0D5367",
+    borderRadius: 13,
   },
 
   verifiedFill: {
-    backgroundColor: "#22C55E",
+    backgroundColor: "#22B981",
   },
 
   otpInput: {
@@ -440,7 +445,7 @@ const styles = StyleSheet.create({
 
   timerContainer: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 14,
   },
 
   timerText: {
@@ -454,14 +459,14 @@ const styles = StyleSheet.create({
   },
 
   verifyButton: {
-    height: 52,
+    height: 49,
     borderRadius: 14,
-    backgroundColor: "#6C63FF",
+    backgroundColor: "#0D5367",
     justifyContent: "center",
     alignItems: "center",
     marginTop: 5,
 
-    shadowColor: "#6ab69f",
+    shadowColor: "#0D5367",
     shadowOffset: {
       width: 0,
       height: 6,
@@ -479,11 +484,11 @@ const styles = StyleSheet.create({
 
   resendButton: {
     alignItems: "center",
-    marginTop: 18,
+    marginTop: 10,
   },
 
   resendText: {
-    color: "#7a74e5",
+    color: "#0A829A",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -494,7 +499,7 @@ const styles = StyleSheet.create({
 
   successContainer: {
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 16,
   },
 
   checkCircle: {
@@ -522,7 +527,7 @@ const styles = StyleSheet.create({
   },
 
   successTitle: {
-    marginTop: 14,// 
+    marginTop: 14,
     fontSize: 20,
     fontWeight: "700",
     color: "#22A447",
@@ -533,5 +538,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#777F89",
     textAlign: "center",
+  },
+
+  secureText: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 16,
+  },
+
+  secureTextLabel: {
+    color: "#168C68",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Animated,
@@ -26,7 +26,7 @@ export default function ResetPassword() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const buttonScale = useRef(new Animated.Value(1)).current;
+  const [buttonScale] = useState(() => new Animated.Value(1));
 
   // Password validations
   const hasEightCharacters = newPassword.length >= 8;
@@ -132,7 +132,7 @@ export default function ResetPassword() {
       <AuthAnimatedCard>
         <View style={styles.content}>
           {/* Icon */}
-          <EmbossedIcon icon="🔒" />
+          <EmbossedIcon icon="lock-closed" />
 
           {/* Title */}
           <Text style={styles.title}>
@@ -172,7 +172,7 @@ export default function ResetPassword() {
                     : "eye-outline"
                 }
                 size={22}
-                color="#6C63FF"
+                color="#0A829A"
               />
             </Pressable>
           </View>
@@ -240,7 +240,7 @@ export default function ResetPassword() {
                     : "eye-outline"
                 }
                 size={22}
-                color="#6C63FF"
+                color="#0A829A"
               />
             </Pressable>
           </View>
@@ -325,7 +325,7 @@ function Requirement({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#EEF1F5",
+    backgroundColor: "#F5F9FA",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "#E4E7FF",
+    backgroundColor: "#E2F3F4",
     top: -100,
     right: -100,
   },
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: "#DDF7FF",
+    backgroundColor: "#DDF2F4",
     bottom: -100,
     left: -100,
   },
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
     fontSize: 27,
     fontWeight: "800",
-    color: "#20242C",
+    color: "#0F172A",
     textAlign: "center",
   },
 
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     fontSize: 14,
     lineHeight: 20,
-    color: "#707782",
+    color: "#64748B",
     textAlign: "center",
   },
 
@@ -378,28 +378,30 @@ const styles = StyleSheet.create({
     width: "100%",
     fontSize: 14,
     fontWeight: "700",
-    color: "#383D46",
+    color: "#1E293B",
     marginBottom: 8,
   },
 
   passwordContainer: {
     width: "100%",
     height: 54,
-    borderRadius: 16,
-    backgroundColor: "#EEF1F5",
+    borderWidth: 1,
+    borderColor: "#DCE8EB",
+    borderRadius: 13,
+    backgroundColor: "#F7FAFB",
     flexDirection: "row",
     alignItems: "center",
     paddingLeft: 16,
     paddingRight: 12,
     marginBottom: 14,
 
-    shadowColor: "#FFFFFF",
+    shadowColor: "#173A46",
     shadowOffset: {
-      width: -4,
-      height: -4,
+      width: 0,
+      height: 3,
     },
-    shadowOpacity: 1,
-    shadowRadius: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 5,
 
     elevation: 3,
   },
@@ -420,7 +422,7 @@ const styles = StyleSheet.create({
 
   requirements: {
     width: "100%",
-    backgroundColor: "#E9ECF1",
+    backgroundColor: "#F2F8F9",
     borderRadius: 14,
     padding: 13,
     marginBottom: 18,
@@ -429,7 +431,7 @@ const styles = StyleSheet.create({
   requirementTitle: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#383D46",
+    color: "#1E293B",
     marginBottom: 6,
   },
 
@@ -468,17 +470,17 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 54,
     borderRadius: 16,
-    backgroundColor: "#6C63FF",
+    backgroundColor: "#0D5367",
     justifyContent: "center",
     alignItems: "center",
     marginTop: 12,
 
-    shadowColor: "#6C63FF",
+    shadowColor: "#0D5367",
     shadowOffset: {
       width: 0,
       height: 7,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.28,
     shadowRadius: 10,
     elevation: 7,
   },
@@ -495,7 +497,7 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: "#6C63FF",
+    color: "#0A829A",
     fontSize: 14,
     fontWeight: "700",
   },

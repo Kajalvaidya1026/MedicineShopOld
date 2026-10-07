@@ -1,14 +1,15 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, View } from "react-native";
 
 type EmbossedIconProps = {
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
 };
 
 export default function EmbossedIcon({ icon }: EmbossedIconProps) {
   return (
     <View style={styles.outer}>
       <View style={styles.inner}>
-        <Text style={styles.icon}>{icon}</Text>
+        <Ionicons name={icon} size={29} color="#0D7180" />
       </View>
     </View>
   );
@@ -16,10 +17,10 @@ export default function EmbossedIcon({ icon }: EmbossedIconProps) {
 
 const styles = StyleSheet.create({
   outer: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
-    backgroundColor: "#F1F3F6",
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#EAF6F8",
     justifyContent: "center",
     alignItems: "center",
 
@@ -35,25 +36,22 @@ const styles = StyleSheet.create({
   },
 
   inner: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
 
-    backgroundColor: "#F1F3F6",
+    backgroundColor: "#EAF6F8",
 
-    shadowColor: "#BFC3CA",
+    shadowColor: "#9ABFC5",
     shadowOffset: {
       width: 5,
       height: 5,
     },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.35,
     shadowRadius: 7,
     elevation: 4,
   },
 
-  icon: {
-    fontSize: 30,
-  },
 });
