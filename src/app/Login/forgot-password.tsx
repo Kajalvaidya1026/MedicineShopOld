@@ -11,35 +11,37 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 
 import AuthAnimatedCard from "../components/AuthAnimatedCard";
 import EmbossedIcon from "../components/EmbossedIcon";
+import { AUTH_THEME, createAuthFloat, triggerPressScale } from "../../components/auth-theme";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
 
+  const [cardEntrance] = useState(() => new Animated.Value(0));
+  const [iconFloat] = useState(() => new Animated.Value(0));
   const [buttonScale] = useState(() => new Animated.Value(1));
-  const [glow] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glow, {
-          toValue: 1,
-          duration: 1800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(glow, {
-          toValue: 0,
-          duration: 1800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, [glow]);
+    const floatAnimation = createAuthFloat(iconFloat, { duration: 2400 });
+    const entranceAnimation = Animated.timing(cardEntrance, {
+      toValue: 1,
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+
+    entranceAnimation.start();
+    floatAnimation.start();
+
+    return () => {
+      entranceAnimation.stop();
+      floatAnimation.stop();
+    };
+  }, [cardEntrance, iconFloat]);
 
   const handleSendOTP = () => {
     if (!email.trim()) {
@@ -55,9 +57,20 @@ export default function ForgotPassword() {
     router.push("/Login/otp");
   };
 
+  const safeBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/Login/role");
+  };
+
   const handlePressIn = () => {
     Animated.spring(buttonScale, {
-      toValue: 0.96,
+      toValue: 0.985,
+      friction: 7,
+      tension: 220,
       useNativeDriver: true,
     }).start();
   };
@@ -65,9 +78,28 @@ export default function ForgotPassword() {
   const handlePressOut = () => {
     Animated.spring(buttonScale, {
       toValue: 1,
+      friction: 7,
+      tension: 180,
       useNativeDriver: true,
     }).start();
   };
+
+  const iconRotation = iconFloat.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["-1deg", "1deg"],
+  });
+  const iconTranslateY = iconFloat.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -4],
+  });
+  const cardTranslateY = cardEntrance.interpolate({
+    inputRange: [0, 1],
+    outputRange: [10, 0],
+  });
+  const cardScale = cardEntrance.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.985, 1],
+  });
 
   return (
     <KeyboardAvoidingView
@@ -77,61 +109,90 @@ export default function ForgotPassword() {
       <View style={styles.backgroundCircleOne} />
       <View style={styles.backgroundCircleTwo} />
 
-      <AuthAnimatedCard>
-        <View style={styles.content}>
-          <EmbossedIcon icon="lock-closed" />
-
-          <Text style={styles.title}>
-            Forgot Password?
-          </Text>
-
-          <Text style={styles.description}>
-            Enter your registered email address and we will send you a
-            4-digit code to reset your password.
-          </Text>
-
-          <Text style={styles.label}>
-            Email Address
-          </Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-
-          <Animated.View
-            style={{
-              transform: [{ scale: buttonScale }],
-              width: "100%",
-            }}
-          >
-            <Pressable
-              style={styles.button}
-              onPress={handleSendOTP}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
+      <Animated.View
+        style={[
+          styles.cardEntrance,
+          {
+            opacity: cardEntrance,
+            transform: [
+              { perspective: 900 },
+              { translateY: cardTranslateY },
+              { scale: cardScale },
+            ],
+          },
+        ]}
+      >
+        <AuthAnimatedCard>
+          <View style={styles.content}>
+            <Animated.View
+              style={{
+                transform: [
+                  { translateY: iconTranslateY },
+                  { rotate: iconRotation },
+                  { perspective: 700 },
+                ],
+              }}
             >
-              <Text style={styles.buttonText}>
-                SEND OTP
-              </Text>
-            </Pressable>
-          </Animated.View>
+              <EmbossedIcon icon="lock-closed" />
+            </Animated.View>
 
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backText}>
-              ← Back to Login
+            <Text style={styles.title}>Forgot Password?</Text>
+
+            <Text style={styles.description}>
+              Enter your registered email address and we will send you a
+              4-digit code to reset your password.
             </Text>
-          </Pressable>
-        </View>
-      </AuthAnimatedCard>
+
+            <Text style={styles.label}>Email Address</Text>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Animated.View
+              style={{
+                transform: [{ scale: buttonScale }],
+                width: "100%",
+              }}
+            >
+              <LinearGradient
+                colors={["#0D5D76", "#0B3D4F", "#0B2433"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.gradientButton}
+              >
+                <Pressable
+                  style={styles.button}
+                  onPress={handleSendOTP}
+                  onPressIn={() => {
+                    handlePressIn();
+                    triggerPressScale(buttonScale, 0.985).start();
+                  }}
+                  onPressOut={() => {
+                    handlePressOut();
+                    triggerPressScale(buttonScale, 1).start();
+                  }}
+                >
+                  <Text style={styles.buttonText}>SEND OTP</Text>
+                </Pressable>
+              </LinearGradient>
+            </Animated.View>
+
+            <Pressable
+              onPress={safeBack}
+              style={styles.backButton}
+            >
+              <Text style={styles.backText}>← Back to Login</Text>
+            </Pressable>
+          </View>
+        </AuthAnimatedCard> 
+      </Animated.View>
     </KeyboardAvoidingView>
   );
 }
@@ -139,7 +200,7 @@ export default function ForgotPassword() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F9FA",
+    backgroundColor: AUTH_THEME.colors.background,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -170,11 +231,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  cardEntrance: {
+    width: "100%",
+    alignItems: "center",
+  },
+
   title: {
     marginTop: 10,
     fontSize: 28,
     fontWeight: "800",
-    color: "#0F172A",
+    color: AUTH_THEME.colors.text,
     textAlign: "center",
   },
 
@@ -182,7 +248,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 14,
     lineHeight: 21,
-    color: "#64748B",
+    color: AUTH_THEME.colors.textSoft,
     textAlign: "center",
     marginBottom: 14,
   },
@@ -199,40 +265,39 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 54,
     borderWidth: 1,
-    borderColor: "#DCE8EB",
-    borderRadius: 13,
-    backgroundColor: "#F7FAFB",
+    borderColor: AUTH_THEME.colors.border,
+    borderRadius: AUTH_THEME.radius.input,
+    backgroundColor: AUTH_THEME.colors.surfaceAlt,
     paddingHorizontal: 18,
     fontSize: 15,
     color: "#20242C",
     marginBottom: 16,
-
-    shadowColor: "#173A46",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.06,
+    borderBottomWidth: 3,
+    borderRightWidth: 2,
+    shadowColor: "#A5BBC6",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
     shadowRadius: 5,
-
     elevation: 3,
+  },
+
+  gradientButton: {
+    borderRadius: AUTH_THEME.radius.button,
+    shadowColor: AUTH_THEME.colors.primary,
+    shadowOffset: { width: 0, height: 9 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 7,
   },
 
   button: {
     height: 54,
-    borderRadius: 16,
-    backgroundColor: "#0D5367",
+    borderRadius: AUTH_THEME.radius.button,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-
-    shadowColor: "#0D5367",
-    shadowOffset: {
-      width: 0,
-      height: 7,
-    },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 7,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
   },
 
   buttonText: {
@@ -247,7 +312,7 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: "#0A829A",
+    color: AUTH_THEME.colors.accent,
     fontSize: 14,
     fontWeight: "700",
   },

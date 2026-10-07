@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Animated,
@@ -9,8 +9,11 @@ import {
   View,
 } from "react-native";
 
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+
+import { AUTH_THEME, createAuthFloat, triggerPressScale } from "../../components/auth-theme";
 
 import AuthAnimatedCard from "../components/AuthAnimatedCard";
 import EmbossedIcon from "../components/EmbossedIcon";
@@ -27,6 +30,14 @@ export default function ResetPassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [buttonScale] = useState(() => new Animated.Value(1));
+  const [securityFloat] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    const floatAnimation = createAuthFloat(securityFloat, { duration: 2400 });
+    floatAnimation.start();
+
+    return () => floatAnimation.stop();
+  }, [securityFloat]);
 
   // Password validations
   const hasEightCharacters = newPassword.length >= 8;
@@ -110,18 +121,35 @@ export default function ResetPassword() {
   };
 
   const handlePressIn = () => {
-    Animated.spring(buttonScale, {
-      toValue: 0.96,
-      useNativeDriver: true,
+    triggerPressScale(buttonScale, 0.985, {
+      friction: 7,
+      tension: 220,
     }).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(buttonScale, {
-      toValue: 1,
-      useNativeDriver: true,
+    triggerPressScale(buttonScale, 1, {
+      friction: 7,
+      tension: 180,
     }).start();
   };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace({
+      pathname: "/Login/role",
+      params: { role: roleName || "" },
+    });
+  };
+
+  const securityFloatY = securityFloat.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -3],
+  });
 
   return (
     <View style={styles.container}>
@@ -132,7 +160,11 @@ export default function ResetPassword() {
       <AuthAnimatedCard>
         <View style={styles.content}>
           {/* Icon */}
-          <EmbossedIcon icon="lock-closed" />
+          <Animated.View
+            style={{ transform: [{ translateY: securityFloatY }] }}
+          >
+            <EmbossedIcon icon="lock-closed" />
+          </Animated.View>
 
           {/* Title */}
           <Text style={styles.title}>
@@ -267,21 +299,34 @@ export default function ResetPassword() {
               transform: [{ scale: buttonScale }],
             }}
           >
-            <Pressable
-              style={styles.button}
-              onPress={handleResetPassword}
-              onPressIn={handlePressIn}
-              onPressOut={handlePressOut}
+            <LinearGradient
+              colors={["#0D5D76", "#0B3D4F", "#0B2433"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.gradientButton}
             >
-              <Text style={styles.buttonText}>
-                RESET PASSWORD
-              </Text>
-            </Pressable>
+              <Pressable
+                style={styles.button}
+                onPress={handleResetPassword}
+                onPressIn={() => {
+                  handlePressIn();
+                  triggerPressScale(buttonScale, 0.985).start();
+                }}
+                onPressOut={() => {
+                  handlePressOut();
+                  triggerPressScale(buttonScale, 1).start();
+                }}
+              >
+                <Text style={styles.buttonText}>
+                  RESET PASSWORD
+                </Text>
+              </Pressable>
+            </LinearGradient>
           </Animated.View>
 
           {/* Back */}
           <Pressable
-            onPress={() => router.back()}
+            onPress={handleBack}
             style={styles.backButton}
           >
             <Text style={styles.backText}>
@@ -325,7 +370,7 @@ function Requirement({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F9FA",
+    backgroundColor: AUTH_THEME.colors.background,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -361,7 +406,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
     fontSize: 27,
     fontWeight: "800",
-    color: "#0F172A",
+    color: AUTH_THEME.colors.text,
     textAlign: "center",
   },
 
@@ -370,7 +415,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     fontSize: 14,
     lineHeight: 20,
-    color: "#64748B",
+    color: AUTH_THEME.colors.textSoft,
     textAlign: "center",
   },
 
@@ -386,23 +431,20 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 54,
     borderWidth: 1,
-    borderColor: "#DCE8EB",
-    borderRadius: 13,
-    backgroundColor: "#F7FAFB",
+    borderColor: AUTH_THEME.colors.border,
+    borderRadius: AUTH_THEME.radius.input,
+    backgroundColor: AUTH_THEME.colors.surfaceAlt,
     flexDirection: "row",
     alignItems: "center",
     paddingLeft: 16,
     paddingRight: 12,
     marginBottom: 14,
-
-    shadowColor: "#173A46",
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.06,
+    borderBottomWidth: 3,
+    borderRightWidth: 2,
+    shadowColor: "#A5BBC6",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
     shadowRadius: 5,
-
     elevation: 3,
   },
 
@@ -422,7 +464,7 @@ const styles = StyleSheet.create({
 
   requirements: {
     width: "100%",
-    backgroundColor: "#F2F8F9",
+    backgroundColor: AUTH_THEME.colors.surfaceSoft,
     borderRadius: 14,
     padding: 13,
     marginBottom: 18,
@@ -466,23 +508,26 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
 
+  gradientButton: {
+    width: "100%",
+    borderRadius: AUTH_THEME.radius.button,
+    marginTop: 12,
+    shadowColor: AUTH_THEME.colors.primary,
+    shadowOffset: { width: 0, height: 9 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 7,
+  },
+
   button: {
     width: "100%",
     height: 54,
-    borderRadius: 16,
-    backgroundColor: "#0D5367",
+    borderRadius: AUTH_THEME.radius.button,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 12,
-
-    shadowColor: "#0D5367",
-    shadowOffset: {
-      width: 0,
-      height: 7,
-    },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 7,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
   },
 
   buttonText: {
@@ -497,7 +542,7 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: "#0A829A",
+    color: AUTH_THEME.colors.accent,
     fontSize: 14,
     fontWeight: "700",
   },

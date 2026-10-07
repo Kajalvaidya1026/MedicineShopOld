@@ -10,6 +10,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
+import { AUTH_THEME } from "../../components/auth-theme";
+
 type AuthAnimatedCardProps = {
   children: ReactNode;
 };
@@ -113,21 +115,18 @@ const styles = StyleSheet.create({
     maxWidth: 430,
     maxHeight: "100%",
     flexShrink: 1,
-    borderRadius: 30,
+    borderRadius: AUTH_THEME.radius.card + 2,
     padding: 2,
     position: "relative",
-
-    // Static background so the card never becomes transparent
-    backgroundColor: "#0D5367",
-
-    shadowColor: "#0D5367",
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    elevation: 10,
+    backgroundColor: AUTH_THEME.colors.primary,
+    borderWidth: 1,
+    borderColor: "#9AE3EB",
+    shadowColor: AUTH_THEME.colors.primary,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.22,
+    shadowRadius: 22,
+    elevation: 12,
+    transform: [{ perspective: 1000 }],
   },
 
   borderGlow: {
@@ -144,11 +143,11 @@ const styles = StyleSheet.create({
   card: {
     maxHeight: "100%",
     flexGrow: 0,
-    borderRadius: 28,
-    backgroundColor: "#FFFFFF",
+    borderRadius: AUTH_THEME.radius.card,
+    backgroundColor: AUTH_THEME.colors.surface,
     borderWidth: 1,
     borderColor: "#DCECEF",
-    shadowColor: "#173A46",
+    shadowColor: AUTH_THEME.colors.shadow,
     shadowOffset: { width: 6, height: 6 },
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -156,8 +155,8 @@ const styles = StyleSheet.create({
   },
 
   cardContent: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 28,
+    backgroundColor: AUTH_THEME.colors.surface,
+    borderRadius: AUTH_THEME.radius.card,
     padding: 18,
   },
 
@@ -177,7 +176,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#E4F2F3",
-    shadowColor: "#0D5367",
+    shadowColor: AUTH_THEME.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 7,
@@ -185,7 +184,7 @@ const styles = StyleSheet.create({
   },
 
   brandName: {
-    color: "#0D5367",
+    color: AUTH_THEME.colors.primary,
     fontSize: 15,
     fontWeight: "900",
     letterSpacing: 1,

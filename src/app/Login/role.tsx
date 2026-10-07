@@ -1,7 +1,10 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -10,6 +13,12 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+
+import { AUTH_THEME, createAuthFloat, triggerPressScale } from "../../components/auth-theme";
+import { normalizeRole } from "../../constants/roles";
+import { loginUser } from "../../api/auth";
+import { ApiError } from "../../api/client";
 
 export default function RoleLogin() {
   const router = useRouter();
@@ -20,16 +29,115 @@ export default function RoleLogin() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [cardEntrance] = useState(() => new Animated.Value(0));
+  const [medicalFloat] = useState(() => new Animated.Value(0));
+  const [buttonScale] = useState(() => new Animated.Value(1));
+  const [loginSuccessVisible, setLoginSuccessVisible] = useState(false);
+  const [loginError, setLoginError] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const loginInFlight = useRef(false);
+  const navigationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const login = () => {
-    console.log({
-      role,
-      email,
-      password,
+  useEffect(
+    () => () => {
+      if (navigationTimer.current) {
+        clearTimeout(navigationTimer.current);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    const entranceAnimation = Animated.timing(cardEntrance, {
+      toValue: 1,
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
     });
+    const floatAnimation = createAuthFloat(medicalFloat, { duration: 2400 });
 
-    // Later:
-    // Connect this button to your Spring Boot login API.
+    entranceAnimation.start();
+    floatAnimation.start();
+
+    return () => {
+      entranceAnimation.stop();
+      floatAnimation.stop();
+    };
+  }, [cardEntrance, medicalFloat]);
+
+  const cardTranslateY = cardEntrance.interpolate({
+    inputRange: [0, 1],
+    outputRange: [9, 0],
+  });
+  const cardScale = cardEntrance.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.99, 1],
+  });
+  const medicalFloatY = medicalFloat.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -4],
+  });
+
+  const login = async () => {
+    if (loginInFlight.current) {
+      return;
+    }
+
+    const dashboardRole = normalizeRole(role);
+
+    if (!dashboardRole) {
+      setLoginError({
+        title: "Role Unavailable",
+        message: "Choose a supported role before signing in.",
+      });
+      return;
+    }
+
+    loginInFlight.current = true;
+    setIsLoading(true);
+    setLoginError(null);
+
+    try {
+      const response = await loginUser(email.trim(), password);
+
+      if (!response.flag) {
+        setLoginError({
+          title: "Login Failed",
+          message: response.message || "Invalid username or password.",
+        });
+        return;
+      }
+
+      setLoginSuccessVisible(true);
+      navigationTimer.current = setTimeout(() => {
+        router.replace({
+          pathname: "/Dashboard/[role]",
+          params: { role: dashboardRole },
+        });
+      }, 1400);
+    } catch (error) {
+      const message =
+        error instanceof ApiError
+          ? error.message
+          : "Unable to sign in right now. Please try again.";
+
+      setLoginError({ title: "Login Error", message });
+    } finally {
+      loginInFlight.current = false;
+      setIsLoading(false);
+    }
+  };
+
+  const safeBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/");
   };
 
   return (
@@ -38,6 +146,49 @@ export default function RoleLogin() {
 
       <View style={styles.backgroundCircleOne} />
       <View style={styles.backgroundCircleTwo} />
+
+      <Modal
+        visible={loginSuccessVisible || loginError !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setLoginSuccessVisible(false);
+          setLoginError(null);
+        }}
+      >
+        <View style={styles.successModalBackdrop}>
+          <View style={styles.successModalCard}>
+            {loginError ? (
+              <>
+                <View style={[styles.successIcon, styles.errorIcon]}>
+                  <Text style={[styles.successIconText, styles.errorIconText]}>
+                    !
+                  </Text>
+                </View>
+                <Text style={styles.successTitle}>{loginError.title}</Text>
+                <Text style={styles.successMessage}>{loginError.message}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setLoginError(null)}
+                  style={styles.errorDismissButton}
+                >
+                  <Text style={styles.errorDismissText}>OK</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <View style={styles.successIcon}>
+                  <Text style={styles.successIconText}>✓</Text>
+                </View>
+                <Text style={styles.successTitle}>Login Successful!</Text>
+                <Text style={styles.successMessage}>
+                  Taking you to your dashboard.
+                </Text>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -77,7 +228,12 @@ export default function RoleLogin() {
 
               {/* 3D Medical Object */}
 
-              <View style={styles.visual}>
+              <Animated.View
+                style={[
+                  styles.visual,
+                  { transform: [{ translateY: medicalFloatY }] },
+                ]}
+              >
                 <View style={styles.visualGlow} />
 
                 <View style={styles.medicalCircle}>
@@ -92,14 +248,26 @@ export default function RoleLogin() {
                 <View style={styles.miniPill}>
                   <View style={styles.pillLine} />
                 </View>
-              </View>
+              </Animated.View>
             </View>
           </View>
 
           {/* RIGHT SIDE */}
 
           <View style={styles.rightSide}>
-            <View style={styles.loginCard}>
+            <Animated.View
+              style={[
+                styles.loginCard,
+                {
+                  opacity: cardEntrance,
+                  transform: [
+                    { perspective: 900 },
+                    { translateY: cardTranslateY },
+                    { scale: cardScale },
+                  ],
+                },
+              ]}
+            >
               <View style={styles.cardTopLine} />
 
               <Text style={styles.loginSmall}>ACCOUNT ACCESS</Text>
@@ -151,17 +319,45 @@ export default function RoleLogin() {
 
               {/* LOGIN */}
 
-              <Pressable
-                onPress={login}
-                style={({ pressed }) => [
-                  styles.loginButton,
-                  pressed && styles.buttonPressed,
-                ]}
+              <Animated.View
+                style={{
+                  width: "100%",
+                  transform: [{ scale: buttonScale }],
+                }}
               >
-                <Text style={styles.loginButtonText}>Sign In</Text>
+                <LinearGradient
+                  colors={["#0D5D76", "#0B3D4F", "#0B2433"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.gradientButtonWrap}
+                >
+                  <Pressable
+                    onPress={login}
+                    disabled={isLoading}
+                    accessibilityState={{ disabled: isLoading, busy: isLoading }}
+                    style={({ pressed }) => [
+                      styles.loginButton,
+                      pressed && !isLoading && styles.buttonPressed,
+                    ]}
+                    onPressIn={() => {
+                      if (!isLoading) {
+                        triggerPressScale(buttonScale, 0.985).start();
+                      }
+                    }}
+                    onPressOut={() => {
+                      if (!isLoading) {
+                        triggerPressScale(buttonScale, 1).start();
+                      }
+                    }}
+                  >
+                    <Text style={styles.loginButtonText}>
+                      {isLoading ? "Signing In..." : "Sign In"}
+                    </Text>
 
-                <Text style={styles.loginArrow}>→</Text>
-              </Pressable>
+                    <Text style={styles.loginArrow}>→</Text>
+                  </Pressable>
+                </LinearGradient>
+              </Animated.View>
 
               {/* SECURITY */}
 
@@ -175,15 +371,20 @@ export default function RoleLogin() {
                 </Text>
               </View>
 
-              {/* BACK */}
+              <Pressable
+                onPress={() => router.push("/Login/create-account")}
+                style={styles.createAccountLink}
+              >
+                <Text style={styles.createAccountText}>Create account</Text>
+              </Pressable>
 
               <Pressable
-                onPress={() => router.back()}
+                onPress={safeBack}
                 style={styles.backButton}
               >
                 <Text style={styles.backText}>← Back to role selection</Text>
               </Pressable>
-            </View>
+            </Animated.View>
 
             <Text style={styles.footer}>Secure • Simple • Reliable</Text>
           </View>
@@ -196,7 +397,7 @@ export default function RoleLogin() {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: "#F5F9FA",
+    backgroundColor: AUTH_THEME.colors.background,
   },
 
   backgroundCircleOne: {
@@ -414,16 +615,13 @@ const styles = StyleSheet.create({
   loginCard: {
     width: "100%",
     maxWidth: 490,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
+    backgroundColor: AUTH_THEME.colors.surface,
+    borderRadius: AUTH_THEME.radius.card,
     padding: 38,
-    shadowColor: "#183E4A",
-    shadowOffset: {
-      width: 0,
-      height: 20,
-    },
+    shadowColor: AUTH_THEME.colors.shadow,
+    shadowOffset: { width: 0, height: 18 },
     shadowOpacity: 0.12,
-    shadowRadius: 30,
+    shadowRadius: 28,
     elevation: 12,
   },
 
@@ -447,7 +645,7 @@ const styles = StyleSheet.create({
   },
 
   loginTitle: {
-    color: "#173A46",
+    color: AUTH_THEME.colors.text,
     fontSize: 32,
     fontWeight: "900",
     marginTop: 8,
@@ -480,13 +678,20 @@ const styles = StyleSheet.create({
 
   input: {
     height: 55,
-    borderRadius: 12,
+    borderRadius: AUTH_THEME.radius.input,
     borderWidth: 1,
-    borderColor: "#DCE7EA",
-    backgroundColor: "#FAFCFC",
+    borderColor: AUTH_THEME.colors.border,
+    backgroundColor: AUTH_THEME.colors.surfaceAlt,
     paddingHorizontal: 16,
     color: "#203F49",
     fontSize: 14,
+    borderBottomWidth: 3,
+    borderRightWidth: 2,
+    shadowColor: "#B8C9CF",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   forgot: {
@@ -495,23 +700,26 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
+  gradientButtonWrap: {
+    borderRadius: 16,
+    marginTop: 5,
+    shadowColor: "#0B687F",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+
   loginButton: {
     height: 57,
-    borderRadius: 13,
-    backgroundColor: "#0B687F",
+    borderRadius: 16,
+    backgroundColor: "transparent",
     justifyContent: "center",
     alignItems: "center",
     flexDirection: "row",
     gap: 20,
-    marginTop: 5,
-    shadowColor: "#0B687F",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
   },
 
   buttonPressed: {
@@ -551,15 +759,99 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
 
+  createAccountLink: {
+    alignItems: "center",
+    marginTop: 14,
+  },
+
+  createAccountText: {
+    color: AUTH_THEME.colors.accent,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+
   backButton: {
     alignItems: "center",
-    marginTop: 25,
+    marginTop: 18,
   },
 
   backText: {
-    color: "#087E98",
+    color: AUTH_THEME.colors.accent,
     fontSize: 12,
     fontWeight: "800",
+  },
+
+  successModalBackdrop: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "rgba(15, 23, 42, 0.38)",
+  },
+
+  successModalCard: {
+    width: "100%",
+    maxWidth: 360,
+    alignItems: "center",
+    paddingHorizontal: 28,
+    paddingVertical: 30,
+    borderRadius: AUTH_THEME.radius.card,
+    backgroundColor: AUTH_THEME.colors.surface,
+    ...AUTH_THEME.shadow.soft,
+  },
+
+  successIcon: {
+    width: 54,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+    borderRadius: 27,
+    backgroundColor: AUTH_THEME.colors.successSoft,
+  },
+
+  successIconText: {
+    color: AUTH_THEME.colors.success,
+    fontSize: 28,
+    fontWeight: "800",
+  },
+
+  errorIcon: {
+    backgroundColor: "#FEE2E2",
+  },
+
+  errorIconText: {
+    color: AUTH_THEME.colors.danger,
+  },
+
+  successTitle: {
+    color: AUTH_THEME.colors.text,
+    fontSize: 20,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+
+  successMessage: {
+    marginTop: 8,
+    color: AUTH_THEME.colors.textSoft,
+    fontSize: 14,
+    textAlign: "center",
+  },
+
+  errorDismissButton: {
+    minWidth: 88,
+    alignItems: "center",
+    marginTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: AUTH_THEME.radius.button,
+    backgroundColor: AUTH_THEME.colors.primary,
+  },
+
+  errorDismissText: {
+    color: AUTH_THEME.colors.surface,
+    fontSize: 14,
+    fontWeight: "700",
   },
 
   footer: {

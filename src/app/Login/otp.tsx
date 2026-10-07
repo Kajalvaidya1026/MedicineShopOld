@@ -11,7 +11,9 @@ import {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import AuthAnimatedCard from "../components/AuthAnimatedCard";
+import { AUTH_THEME, createAuthFloat, triggerPressScale } from "../../components/auth-theme";
 
 export default function OTP() {
   const [otp, setOtp] = useState(["", "", "", ""]);
@@ -19,8 +21,17 @@ export default function OTP() {
   const [error, setError] = useState("");
 
   const [verified, setVerified] = useState(false);
+  const [securityFloat] = useState(() => new Animated.Value(0));
+  const [verifyButtonScale] = useState(() => new Animated.Value(1));
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  useEffect(() => {
+    const floatAnimation = createAuthFloat(securityFloat, { duration: 2400 });
+    floatAnimation.start();
+
+    return () => floatAnimation.stop();
+  }, [securityFloat]);
 
   // Fill animation for each OTP box
   const [fillAnimations] = useState(() =>
@@ -172,13 +183,32 @@ export default function OTP() {
     inputRefs.current[0]?.focus();
   };
 
+  const safeBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+
+    router.replace("/Login/role");
+  };
+
+  const securityFloatY = securityFloat.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -3],
+  });
+  const verifyButtonTransform = [{ scale: verifyButtonScale }];
+
   return (
     <View style={styles.container}>
       <AuthAnimatedCard>
         <View style={styles.header}>
-          <View style={styles.headerIcon}>
-            <Ionicons name="lock-closed" size={28} color="#0D7180" />
-          </View>
+          <Animated.View
+            style={{ transform: [{ translateY: securityFloatY }] }}
+          >
+            <View style={styles.headerIcon}>
+              <Ionicons name="lock-closed" size={28} color="#0D7180" />
+            </View>
+          </Animated.View>
           <Text style={styles.title}>Verification Code</Text>
           <Text style={styles.subtitle}>
             {verified
@@ -261,15 +291,22 @@ export default function OTP() {
 
         {/* VERIFY BUTTON */}
         {!verified && (
-          <TouchableOpacity
-            activeOpacity={0.85}
-            style={styles.verifyButton}
-            onPress={verifyOTP}
+          <Animated.View
+            style={[
+              { width: "100%" },
+              { transform: verifyButtonTransform },
+            ]}
           >
-            <Text style={styles.verifyButtonText}>
-              Verify OTP
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.verifyButton}
+              onPress={verifyOTP}
+              onPressIn={() => triggerPressScale(verifyButtonScale, 0.985).start()}
+              onPressOut={() => triggerPressScale(verifyButtonScale, 1).start()}
+            >
+              <Text style={styles.verifyButtonText}>Verify OTP</Text>
+            </TouchableOpacity>
+          </Animated.View>
         )}
 
         {/* RESEND */}
@@ -289,6 +326,10 @@ export default function OTP() {
             </Text>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity onPress={safeBack} style={styles.backLink}>
+          <Text style={styles.backLinkText}>← Back to Login</Text>
+        </TouchableOpacity>
 
         {/* SUCCESS */}
         {verified && (
@@ -337,7 +378,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "#F5F9FA",
+    backgroundColor: AUTH_THEME.colors.background,
   },
 
   header: {
@@ -365,13 +406,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 25,
     fontWeight: "800",
-    color: "#0F172A",
+    color: AUTH_THEME.colors.text,
     marginBottom: 7,
   },
 
   subtitle: {
     fontSize: 14,
-    color: "#64748B",
+    color: AUTH_THEME.colors.textSoft,
     textAlign: "center",
     lineHeight: 21,
   },
@@ -388,7 +429,7 @@ const styles = StyleSheet.create({
     height: 62,
     borderRadius: 14,
     overflow: "hidden",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: AUTH_THEME.colors.surface,
     borderWidth: 1.5,
     borderBottomWidth: 3,
     borderColor: "#D7E3ED",
@@ -460,13 +501,13 @@ const styles = StyleSheet.create({
 
   verifyButton: {
     height: 49,
-    borderRadius: 14,
-    backgroundColor: "#0D5367",
+    borderRadius: AUTH_THEME.radius.button,
+    backgroundColor: AUTH_THEME.colors.primary,
     justifyContent: "center",
     alignItems: "center",
     marginTop: 5,
 
-    shadowColor: "#0D5367",
+    shadowColor: AUTH_THEME.colors.primary,
     shadowOffset: {
       width: 0,
       height: 6,
@@ -488,7 +529,7 @@ const styles = StyleSheet.create({
   },
 
   resendText: {
-    color: "#0A829A",
+    color: AUTH_THEME.colors.accent,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -550,6 +591,15 @@ const styles = StyleSheet.create({
   secureTextLabel: {
     color: "#168C68",
     fontSize: 12,
+    fontWeight: "700",
+  },
+  backLink: {
+    alignItems: "center",
+    marginTop: 16,
+  },
+  backLinkText: {
+    color: AUTH_THEME.colors.accent,
+    fontSize: 14,
     fontWeight: "700",
   },
 });
