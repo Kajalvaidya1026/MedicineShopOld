@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  Alert,
   Animated,
   KeyboardAvoidingView,
   Modal,
@@ -11,29 +12,33 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
 
+import { AUTH_THEME, createAuthFloat, triggerPressScale } from "../../components/auth-theme";
 import AuthAnimatedCard from "../components/AuthAnimatedCard";
 import EmbossedIcon from "../components/EmbossedIcon";
-import { AUTH_THEME, createAuthFloat, triggerPressScale } from "../../components/auth-theme";
-import { registerUser } from "../../api/auth";
-import { ApiError } from "../../api/client";
+
+type PublicRole = "Customer" | "Supplier" | "Doctor";
+type FormErrors = Partial<
+  Record<"name" | "email" | "accountType" | "password" | "confirmPassword", string>
+>;
+
+const publicRoles: PublicRole[] = ["Customer", "Supplier", "Doctor"];
 
 export default function CreateAccount() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [userId, setUserId] = useState("");
-  const [contactNumber, setContactNumber] = useState("");
+  const [accountType, setAccountType] = useState<PublicRole | "">("Customer");
+  const [accountTypeOpen, setAccountTypeOpen] = useState(false);
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submissionNotice, setSubmissionNotice] = useState<{
     title: string;
     message: string;
     success: boolean;
   } | null>(null);
-  const submissionInFlight = React.useRef(false);
 
   const [cardEntrance] = useState(() => new Animated.Value(0));
   const [iconFloat] = useState(() => new Animated.Value(0));
@@ -65,9 +70,7 @@ export default function CreateAccount() {
 
     router.replace("/Login/role");
   };
-
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const indianMobilePattern = /^[6-9]\d{9}$/;
 
   const hasEightCharacters = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
@@ -76,84 +79,55 @@ export default function CreateAccount() {
   const passwordValid =
     hasEightCharacters && hasUppercase && hasLowercase && hasNumber;
 
-  const handleCreateAccount = async () => {
-    if (submissionInFlight.current) {
+  const handleCreateAccount = () => {
+    const errors: FormErrors = {};
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim();
+
+    if (!trimmedName) {
+      errors.name = "Please enter your name.";
+    }
+
+    if (!trimmedEmail) {
+      errors.email = "Please enter your email address.";
+    } else if (!emailPattern.test(trimmedEmail)) {
+      errors.email = "Please enter a valid email address.";
+    }
+
+    if (!accountType) {
+      errors.accountType = "Please select an account type.";
+    }
+
+    if (!password) {
+      errors.password = "Please enter a password.";
+    } else if (!passwordValid) {
+      errors.password =
+        "Use at least 8 characters, including uppercase and lowercase letters and a number.";
+    }
+
+    if (!confirmPassword) {
+      errors.confirmPassword = "Please confirm your password.";
+    } else if (confirmPassword !== password) {
+      errors.confirmPassword = "Passwords do not match.";
+    }
+
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
-    if (!fullName.trim()) {
-      Alert.alert("Name Required", "Please enter your full name.");
-      return;
-    }
+    setEmail(trimmedEmail);
+    setAccountTypeOpen(false);
+    setSubmissionNotice({
+      title: "Account Created Successfully!",
+      message: "Your MEDICARE registration form has been completed successfully.",
+      success: true,
+    });
+  };
 
-    if (!email.trim()) {
-      Alert.alert("Email Required", "Please enter your email.");
-      return;
-    }
-
-    if (!emailPattern.test(email.trim())) {
-      Alert.alert("Invalid Email", "Please enter a valid email address.");
-      return;
-    }
-
-    if (!userId.trim()) {
-      Alert.alert("User ID Required", "Please enter your user ID.");
-      return;
-    }
-
-    if (!contactNumber.trim()) {
-      Alert.alert("Contact Number Required", "Please enter your contact number.");
-      return;
-    }
-
-    if (!indianMobilePattern.test(contactNumber.trim())) {
-      Alert.alert(
-        "Invalid Contact Number",
-        "Enter a valid 10-digit Indian mobile number."
-      );
-      return;
-    }
-
-    if (!passwordValid) {
-      Alert.alert(
-        "Invalid Password",
-        "Please meet all password requirements."
-      );
-      return;
-    }
-
-    submissionInFlight.current = true;
-    setIsSubmitting(true);
+  const continueToSignIn = () => {
     setSubmissionNotice(null);
-
-    try {
-      await registerUser({
-        userName: userId.trim(),
-        password,
-        fullName: fullName.trim(),
-        email: email.trim(),
-        contactNumber: contactNumber.trim(),
-        roleId: 1,
-        isActive: true,
-      });
-      setSubmissionNotice({
-        title: "Registration Successful",
-        message: "Your account has been created successfully.",
-        success: true,
-      });
-    } catch (error) {
-      setSubmissionNotice({
-        title: "Registration Failed",
-        message:
-          error instanceof ApiError
-            ? error.message
-            : "Unable to create your account right now. Please try again.",
-        success: false,
-      });
-    } finally {
-      submissionInFlight.current = false;
-      setIsSubmitting(false);
-    }
+    safeBack();
   };
 
   const cardTranslateY = cardEntrance.interpolate({
@@ -162,7 +136,7 @@ export default function CreateAccount() {
   });
   const cardScale = cardEntrance.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.985, 1],
+    outputRange: [0.985, 1],l
   });
   const iconTranslateY = iconFloat.interpolate({
     inputRange: [0, 1],
@@ -229,12 +203,21 @@ export default function CreateAccount() {
             </View>
             <Text style={styles.noticeTitle}>{submissionNotice?.title}</Text>
             <Text style={styles.noticeMessage}>{submissionNotice?.message}</Text>
+            {submissionNotice?.success && (
+              <Text style={styles.noticeRole}>Account Type: {accountType}</Text>
+            )}
             <Pressable
               accessibilityRole="button"
-              onPress={() => setSubmissionNotice(null)}
+              onPress={
+                submissionNotice?.success
+                  ? continueToSignIn
+                  : () => setSubmissionNotice(null)
+              }
               style={styles.noticeButton}
             >
-              <Text style={styles.noticeButtonText}>OK</Text>
+              <Text style={styles.noticeButtonText}>
+                {submissionNotice?.success ? "Continue to Sign In" : "OK"}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -265,59 +248,153 @@ export default function CreateAccount() {
               Sign up to get started with MEDICARE.
             </Text>
 
-            <Text style={styles.label}>Full Name</Text>
+            <Text style={styles.label}>Name</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, formErrors.name && styles.inputWithError]}
               placeholder="Enter your full name"
               placeholderTextColor="#9AAEB4"
               value={fullName}
-              onChangeText={setFullName}
+              onChangeText={(value) => {
+                setFullName(value);
+                if (formErrors.name && value.trim()) {
+                  setFormErrors((current) => ({ ...current, name: undefined }));
+                }
+              }}
               autoCapitalize="words"
             />
+            {!!formErrors.name && (
+              <Text style={styles.fieldError}>{formErrors.name}</Text>
+            )}
 
             <Text style={styles.label}>Email Address</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, formErrors.email && styles.inputWithError]}
               placeholder="Enter your email"
               placeholderTextColor="#9AAEB4"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(value) => {
+                setEmail(value);
+                if (formErrors.email) {
+                  const trimmedEmail = value.trim();
+                  const emailError = !trimmedEmail
+                    ? "Please enter your email address."
+                    : emailPattern.test(trimmedEmail)
+                      ? undefined
+                      : "Please enter a valid email address.";
+                  setFormErrors((current) => ({
+                    ...current,
+                    email: emailError,
+                  }));
+                }
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
             />
+            {!!formErrors.email && (
+              <Text style={styles.fieldError}>{formErrors.email}</Text>
+            )}
 
-            <Text style={styles.label}>User ID</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Create a user ID"
-              placeholderTextColor="#9AAEB4"
-              value={userId}
-              onChangeText={setUserId}
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.label}>Contact Number</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="10-digit Indian mobile number"
-              placeholderTextColor="#9AAEB4"
-              value={contactNumber}
-              onChangeText={(value) =>
-                setContactNumber(value.replace(/\D/g, "").slice(0, 10))
-              }
-              keyboardType="number-pad"
-              maxLength={10}
-            />
+            <Text style={styles.label}>Account Type</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Account Type: ${accountType || "Select account type"}`}
+              accessibilityState={{ expanded: accountTypeOpen }}
+              onPress={() => setAccountTypeOpen((isOpen) => !isOpen)}
+              style={[
+                styles.accountTypeInput,
+                formErrors.accountType && styles.inputWithError,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.accountTypeValue,
+                  !accountType && styles.accountTypePlaceholder,
+                ]}
+              >
+                {accountType || "Select account type"}
+              </Text>
+              <Text style={styles.accountTypeChevron}>
+                {accountTypeOpen ? "⌃" : "⌄"}
+              </Text>
+            </Pressable>
+            {accountTypeOpen && (
+              <View style={styles.accountTypeOptions}>
+                {publicRoles.map((role) => (
+                  <Pressable
+                    key={role}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: accountType === role }}
+                    onPress={() => {
+                      setAccountType(role);
+                      setAccountTypeOpen(false);
+                      setFormErrors((current) => ({
+                        ...current,
+                        accountType: undefined,
+                      }));
+                    }}
+                    style={[
+                      styles.accountTypeOption,
+                      accountType === role && styles.accountTypeOptionSelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.accountTypeOptionText,
+                        accountType === role &&
+                          styles.accountTypeOptionTextSelected,
+                      ]}
+                    >
+                      {role}
+                    </Text>
+                    {accountType === role && (
+                      <Text style={styles.accountTypeCheck}>✓</Text>
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            {!!formErrors.accountType && (
+              <Text style={styles.fieldError}>{formErrors.accountType}</Text>
+            )}
 
             <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
+            <View
+              style={[
+                styles.passwordContainer,
+                formErrors.password && styles.inputWithError,
+              ]}
+            >
               <TextInput
                 style={styles.passwordInput}
                 placeholder="Create a password"
                 placeholderTextColor="#9AAEB4"
                 secureTextEntry={!showPassword}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(value) => {
+                  setPassword(value);
+                  if (formErrors.password) {
+                    setFormErrors((current) => ({
+                      ...current,
+                      password: !value
+                        ? "Please enter a password."
+                        : value.length >= 8 &&
+                            /[A-Z]/.test(value) &&
+                            /[a-z]/.test(value) &&
+                            /[0-9]/.test(value)
+                          ? undefined
+                          : "Use at least 8 characters, including uppercase and lowercase letters and a number.",
+                    }));
+                  }
+                  if (formErrors.confirmPassword && confirmPassword) {
+                    setFormErrors((current) => ({
+                      ...current,
+                      confirmPassword:
+                        confirmPassword === value
+                          ? undefined
+                          : "Passwords do not match.",
+                    }));
+                  }
+                }}
                 autoCapitalize="none"
               />
               <Pressable
@@ -328,7 +405,54 @@ export default function CreateAccount() {
               </Pressable>
             </View>
 
+            {!!formErrors.password && (
+              <Text style={styles.fieldError}>{formErrors.password}</Text>
+            )}
+
             {renderRequirements()}
+
+            <Text style={styles.label}>Confirm Password</Text>
+            <View
+              style={[
+                styles.passwordContainer,
+                formErrors.confirmPassword && styles.inputWithError,
+              ]}
+            >
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Confirm your password"
+                placeholderTextColor="#9AAEB4"
+                secureTextEntry={!showConfirmPassword}
+                value={confirmPassword}
+                onChangeText={(value) => {
+                  setConfirmPassword(value);
+                  if (formErrors.confirmPassword) {
+                    setFormErrors((current) => ({
+                      ...current,
+                      confirmPassword: !value
+                        ? "Please confirm your password."
+                        : value === password
+                          ? undefined
+                          : "Passwords do not match.",
+                    }));
+                  }
+                }}
+                autoCapitalize="none"
+              />
+              <Pressable
+                onPress={() => setShowConfirmPassword((current) => !current)}
+                style={styles.eyeButton}
+              >
+                <Text style={styles.eyeButtonText}>
+                  {showConfirmPassword ? "Hide" : "Show"}
+                </Text>
+              </Pressable>
+            </View>
+            {!!formErrors.confirmPassword && (
+              <Text style={styles.fieldError}>
+                {formErrors.confirmPassword}
+              </Text>
+            )}
 
             <Animated.View style={{ transform: [{ scale: buttonScale }], width: "100%" }}>
               <LinearGradient
@@ -340,14 +464,10 @@ export default function CreateAccount() {
                 <Pressable
                   style={styles.button}
                   onPress={handleCreateAccount}
-                  disabled={isSubmitting}
-                  accessibilityState={{ disabled: isSubmitting, busy: isSubmitting }}
                   onPressIn={() => triggerPressScale(buttonScale, 0.985).start()}
                   onPressOut={() => triggerPressScale(buttonScale, 1).start()}
                 >
-                  <Text style={styles.buttonText}>
-                    {isSubmitting ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
-                  </Text>
+                  <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
                 </Pressable>
               </LinearGradient>
             </Animated.View>
@@ -428,6 +548,80 @@ const styles = StyleSheet.create({
     borderBottomWidth: 3,
     borderRightWidth: 2,
     ...AUTH_THEME.shadow.inset,
+  },
+  inputWithError: {
+    marginBottom: 5,
+  },
+  fieldError: {
+    width: "100%",
+    color: AUTH_THEME.colors.danger,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 12,
+  },
+  accountTypeInput: {
+    width: "100%",
+    height: 54,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: AUTH_THEME.colors.border,
+    borderRadius: AUTH_THEME.radius.input,
+    backgroundColor: AUTH_THEME.colors.surfaceAlt,
+    paddingHorizontal: 18,
+    marginBottom: 16,
+    borderBottomWidth: 3,
+    borderRightWidth: 2,
+    ...AUTH_THEME.shadow.inset,
+  },
+  accountTypeValue: {
+    color: "#20242C",
+    fontSize: 15,
+  },
+  accountTypePlaceholder: {
+    color: "#9AAEB4",
+  },
+  accountTypeChevron: {
+    color: AUTH_THEME.colors.accent,
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  accountTypeOptions: {
+    width: "100%",
+    marginTop: -12,
+    marginBottom: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: AUTH_THEME.colors.border,
+    borderRadius: AUTH_THEME.radius.input,
+    backgroundColor: AUTH_THEME.colors.surface,
+    ...AUTH_THEME.shadow.soft,
+  },
+  accountTypeOption: {
+    minHeight: 46,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: AUTH_THEME.colors.border,
+  },
+  accountTypeOptionSelected: {
+    backgroundColor: AUTH_THEME.colors.surfaceSoft,
+  },
+  accountTypeOptionText: {
+    color: AUTH_THEME.colors.text,
+    fontSize: 15,
+  },
+  accountTypeOptionTextSelected: {
+    color: AUTH_THEME.colors.accent,
+    fontWeight: "700",
+  },
+  accountTypeCheck: {
+    color: AUTH_THEME.colors.success,
+    fontSize: 16,
+    fontWeight: "800",
   },
   passwordContainer: {
     width: "100%",
@@ -536,6 +730,12 @@ const styles = StyleSheet.create({
     color: AUTH_THEME.colors.textSoft,
     fontSize: 14,
     textAlign: "center",
+  },
+  noticeRole: {
+    marginTop: 12,
+    color: AUTH_THEME.colors.text,
+    fontSize: 14,
+    fontWeight: "700",
   },
   noticeButton: {
     minWidth: 88,
