@@ -136,7 +136,7 @@ export default function CreateAccount() {
   });
   const cardScale = cardEntrance.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.985, 1],l
+    outputRange: [0.985, 1],
   });
   const iconTranslateY = iconFloat.interpolate({
     inputRange: [0, 1],
